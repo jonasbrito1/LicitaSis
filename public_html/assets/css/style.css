@@ -1,0 +1,320 @@
+/* Resetando estilos básicos */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Cabeçalho */
+header {
+    background-color: #9fbda0;  /* Fundo mais claro para o header */
+    padding: 15px 0; /* Reduzindo o espaço no cabeçalho */
+}
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Logo à esquerda */
+nav .logo-left img {
+    height: 60px;
+    transition: transform 0.3s ease;
+}
+
+/* Logo à direita */
+nav .logo-right img {
+    height: 50px; /* Tamanho reduzido da logo à direita */
+    transition: transform 0.3s ease; /* Transição suave no efeito de hover */
+}
+
+nav .logo-left a:hover img, nav .logo-right a:hover img {
+    transform: scale(1.1); /* Aumenta o tamanho das logos ao passar o mouse */
+}
+
+/* Links de Navegação */
+nav .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;  /* Ajustando o espaçamento entre os links */
+}
+
+nav .nav-links li {
+    margin-left: 10px;
+}
+
+nav .nav-links a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+nav .nav-links a:hover {
+    background-color: #45a049; /* Cor de fundo quando o mouse passar sobre o link */
+    color: white;
+}
+
+/* Menu de hambúrguer - escondido por padrão */
+.hamburger-menu {
+    display: none;  /* Inicialmente, o menu hambúrguer está escondido */
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.hamburger-menu .bar {
+    width: 30px;
+    height: 4px;
+    background-color: #fff;
+    border-radius: 2px;
+}
+
+/* Seção Hero */
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #004b33;
+    color: white;
+    padding: 50px 30px;
+    flex-wrap: wrap;
+}
+
+.hero-content {
+    flex: 1;
+    max-width: 500px;
+}
+
+.hero-content h1 {
+    font-size: 36px;
+    margin-bottom: 15px;
+}
+
+.hero-content p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.cta-button {
+    background-color: #00bfae;
+    color: white;
+    padding: 12px 25px;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+.hero-image {
+    flex: 1;
+    max-width: 600px;
+}
+
+.hero-image img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* Introdução da Empresa */
+.company-introduction {
+    display: flex;
+    justify-content: space-between;
+    padding: 50px 30px;
+    background-color: #00bfae;
+    color: white;
+    flex-wrap: wrap;
+}
+
+.intro-content {
+    flex: 1;
+    max-width: 500px;
+}
+
+.intro-content h2 {
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.intro-content p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.intro-image {
+    flex: 1;
+    max-width: 600px;
+}
+
+.intro-image img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* Rodapé */
+footer {
+    background-color: #006d56;
+    padding: 30px 0;
+    text-align: center;
+    color: white;
+}
+
+.footer-links ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+}
+
+.footer-links li {
+    margin: 0 15px;
+}
+
+.footer-links a {
+    color: white;
+    text-decoration: none;
+}
+
+.social-media {
+    margin-top: 20px;
+}
+
+.social-icon {
+    margin: 0 10px;
+    display: inline-block;
+}
+
+.social-icon img {
+    width: 30px;
+    height: 30px;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    nav {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    nav .nav-links {
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 30px 20px;
+    }
+
+    .hero-content h1 {
+        font-size: 28px;
+    }
+
+    .hero-content p {
+        font-size: 16px;
+    }
+
+    .hero-image img {
+        max-width: 100%;
+    }
+
+    .company-introduction {
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    .intro-content h2 {
+        font-size: 28px;
+    }
+
+    .intro-content p {
+        font-size: 16px;
+    }
+
+    .intro-image img {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    nav {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    nav .logo-left, nav .logo-right {
+        margin-bottom: 10px;
+    }
+
+    nav .nav-links {
+        flex-direction: column;
+        gap: 15px;
+        display: none;  /* Esconde os links de navegação em telas menores */
+    }
+
+    /* Exibe o menu hambúrguer em telas menores */
+    .hamburger-menu {
+        display: flex;
+    }
+
+    .nav-links.show {
+        display: flex; /* Mostra o menu quando a classe 'show' é adicionada */
+    }
+
+    .hero {
+        padding: 20px 10px;
+    }
+
+    .hero-content h1 {
+        font-size: 24px;
+    }
+
+    .hero-content p {
+        font-size: 14px;
+    }
+
+    .cta-button {
+        padding: 10px 20px;
+    }
+
+    .intro-content h2 {
+        font-size: 24px;
+    }
+
+    .intro-content p {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-content h1 {
+        font-size: 20px;
+    }
+
+    .hero-content p {
+        font-size: 12px;
+    }
+
+    .cta-button {
+        padding: 8px 15px;
+    }
+
+    .intro-content h2 {
+        font-size: 20px;
+    }
+
+    .intro-content p {
+        font-size: 12px;
+    }
+}
