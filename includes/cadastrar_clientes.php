@@ -23,8 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $uasg = trim($_POST['uasg']) ?? null;
         $endereco = trim($_POST['endereco']) ?? null;
         $observacoes = trim($_POST['observacoes']) ?? null;
-        $telefones = implode(' / ', array_filter(array_map('trim', $_POST['telefone'] ?? []))); // Concatena telefones
-        $emails = implode(' / ', array_filter(array_map('trim', $_POST['email'] ?? []))); // Concatena emails
+
+        // Concatena múltiplos telefones
+        $telefones = implode(' / ', array_filter(array_map('trim', $_POST['telefone'] ?? [])));
+
+        // Concatena múltiplos emails
+        $emails = implode(' / ', array_filter(array_map('trim', $_POST['email'] ?? [])));
 
         // Verifica se CNPJ e Nome do Órgão estão preenchidos
         if (empty($cnpj) || empty($nome_orgaos)) {
@@ -55,27 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_cliente->bindParam(':email', $emails, PDO::PARAM_STR);
         $stmt_cliente->execute();
         $cliente_id = $pdo->lastInsertId(); // Pega o ID do cliente inserido
-
-        // Caso tenha mais telefones ou emails a serem cadastrados, inserir nas tabelas correspondentes
-        foreach ($_POST['telefone'] as $telefone) {
-            if (!empty($telefone)) {
-                $sql_telefone = "INSERT INTO clientes_telefones (cliente_id, telefone) VALUES (:cliente_id, :telefone)";
-                $stmt_telefone = $pdo->prepare($sql_telefone);
-                $stmt_telefone->bindParam(':cliente_id', $cliente_id, PDO::PARAM_INT);
-                $stmt_telefone->bindParam(':telefone', $telefone, PDO::PARAM_STR);
-                $stmt_telefone->execute();
-            }
-        }
-
-        foreach ($_POST['email'] as $email) {
-            if (!empty($email)) {
-                $sql_email = "INSERT INTO clientes_emails (cliente_id, email) VALUES (:cliente_id, :email)";
-                $stmt_email = $pdo->prepare($sql_email);
-                $stmt_email->bindParam(':cliente_id', $cliente_id, PDO::PARAM_INT);
-                $stmt_email->bindParam(':email', $email, PDO::PARAM_STR);
-                $stmt_email->execute();
-            }
-        }
 
         $success = true; // Cadastro bem-sucedido
     } catch (Exception $e) {
@@ -318,17 +301,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo" class="logo">
 </header>
 
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">Vendas</a>
 </nav>
 
 <div class="container">

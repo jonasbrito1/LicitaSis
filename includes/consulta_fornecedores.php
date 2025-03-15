@@ -30,7 +30,7 @@ if (isset($_GET['search']) && !empty($_GET['search'])) {
     } catch (PDOException $e) {
         $error = "Erro na consulta: " . $e->getMessage();
     }
-} elseif (isset($_GET['show_all'])) {
+} else {
     // Consulta para mostrar todos os fornecedores
     try {
         $sql = "SELECT * FROM fornecedores ORDER BY nome ASC";
@@ -48,6 +48,60 @@ if (isset($_GET['clear_search'])) {
     header("Location: consulta_fornecedores.php");
     exit();
 }
+
+// Função para atualizar o fornecedor
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_fornecedor'])) {
+    $id = $_POST['id'];
+    $codigo = $_POST['codigo'];
+    $nome = $_POST['nome'];
+    $cnpj = $_POST['cnpj'];
+    $endereco = $_POST['endereco'];
+    $telefone = $_POST['telefone'];
+    $email = $_POST['email'];
+    $observacoes = $_POST['observacoes'];
+
+    try {
+        // Atualiza os dados do fornecedor na tabela 'fornecedores'
+        $sql = "UPDATE fornecedores SET codigo = :codigo, nome = :nome, cnpj = :cnpj, endereco = :endereco, telefone = :telefone, email = :email, observacoes = :observacoes WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':codigo', $codigo);
+        $stmt->bindParam(':nome', $nome);
+        $stmt->bindParam(':cnpj', $cnpj);
+        $stmt->bindParam(':endereco', $endereco);
+        $stmt->bindParam(':telefone', $telefone);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':observacoes', $observacoes);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+
+        // Após a atualização, redireciona para a página de consulta de fornecedores
+        header("Location: consulta_fornecedores.php?success=Fornecedor atualizado com sucesso!");
+        exit();
+    } catch (PDOException $e) {
+        // Se houver erro, retorna a mensagem de erro em JSON
+        echo json_encode(['error' => 'Erro ao atualizar o fornecedor: ' . $e->getMessage()]);
+        exit();
+    }
+}
+
+// Verifica se foi feita uma requisição AJAX para pegar os dados do fornecedor
+if (isset($_GET['get_fornecedor_id'])) {
+    $id = $_GET['get_fornecedor_id'];
+    try {
+        $sql = "SELECT * FROM fornecedores WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        
+        $fornecedor = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode($fornecedor); // Retorna os dados do fornecedor em formato JSON
+        exit();
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Erro ao buscar fornecedor: ' . $e->getMessage()]);
+        exit();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -57,7 +111,7 @@ if (isset($_GET['clear_search'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de Fornecedores - ComBraz</title>
     <style>
-        /* Estilos e layout */
+        /* Estilos gerais */
         html, body {
             height: 100%;
             margin: 0;
@@ -70,7 +124,7 @@ if (isset($_GET['clear_search'])) {
         }
 
         header {
-            background-color: rgb(157, 206, 173); /* Fundo verde claro */
+            background-color: rgb(157, 206, 173); 
             padding: 10px 0;
             text-align: center;
             color: white;
@@ -78,13 +132,11 @@ if (isset($_GET['clear_search'])) {
             box-sizing: border-box;
         }
 
-        /* Ajuste responsivo da logo */
         .logo {
-            max-width: 180px;  /* Ajusta a largura máxima da logo */
+            max-width: 180px;
             height: auto;
         }
 
-        /* Menu de navegação */
         nav {
             background-color: #2D893E;
             padding: 10px;
@@ -105,9 +157,9 @@ if (isset($_GET['clear_search'])) {
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 600px;
             margin: 50px auto;
-            background-color:rgb(215, 212, 212);
+            background-color: rgb(215, 212, 212);
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(240, 240, 240, 0.1);
@@ -115,7 +167,7 @@ if (isset($_GET['clear_search'])) {
             box-sizing: border-box;
             height: auto;
             position: relative;
-            overflow-y: auto; /* Adiciona a rolagem apenas ao container */
+            overflow-y: auto;
         }
 
         h2 {
@@ -123,66 +175,6 @@ if (isset($_GET['clear_search'])) {
             color: #2D893E;
             margin-bottom: 30px;
             font-size: 1.8em;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 48%;
-            padding: 12px;
-            background-color: #00bfae;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-right: 4%;
-        }
-
-        button:hover {
-            background-color: #009d8f;
-        }
-
-        /* Centralização e estilização do botão de download XLSX */
-        .btn-container {
-            display: flex;
-            justify-content: center; /* Centraliza o botão */
-            align-items: center;
-            margin-top: 30px;
-        }
-
-        .btn-container a button {
-            white-space: nowrap; /* Garante que o texto não quebre em múltiplas linhas */
-            width: auto; /* Ajusta a largura do botão automaticamente */
-            padding: 12px 30px; /* Aumenta o espaçamento do botão */
-            font-size: 16px; /* Mantém o texto legível */
-        }
-
-        .error, .success {
-            text-align: center;
-            font-size: 16px;
-        }
-
-        .error {
-            color: red;
-        }
-
-        .success {
-            color: green;
         }
 
         table {
@@ -206,24 +198,123 @@ if (isset($_GET['clear_search'])) {
             color: white;
         }
 
-        .content-footer {
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            width: 100%;
+            overflow-x: auto; /* Rolagem horizontal */
+        }
+
+        /* Estilos do Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            height: auto;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .modal-content button {
+            padding: 12px 20px;
+            font-size: 16px;
+            background-color: #00bfae;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-content button:hover {
+            background-color: #009d8f;
+        }
+
+        /* Estilização do campo de pesquisa */
+        .search-bar {
             display: flex;
-            justify-content: center;  /* Centraliza o link */
+            flex-direction: row;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+
+        .search-bar input:focus {
+            border-color: #00bfae;
+            outline: none;
+        }
+
+        /* Estilização dos botões */
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
             margin-top: 20px;
         }
 
-        .content-footer a {
+        .btn-container button {
+            padding: 12px 20px;
+            font-size: 16px;
             background-color: #00bfae;
             color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            font-size: 16px;
+            border: none;
             border-radius: 5px;
-            transition: background-color 0.3s ease;
-            text-align: center;
+            cursor: pointer;
         }
 
-        .content-footer a:hover {
+        .btn-container button:hover {
             background-color: #009d8f;
         }
 
@@ -258,18 +349,18 @@ if (isset($_GET['clear_search'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
-<!-- Menu de navegação -->
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">Vendas</a>
 </nav>
 
 <div class="container">
@@ -288,65 +379,101 @@ if (isset($_GET['clear_search'])) {
 
         <div class="btn-container">
             <button type="submit">Pesquisar</button>
-            <button type="submit" name="show_all" value="1">Mostrar Todos os Fornecedores</button>
-            <button type="submit" name="clear_search" value="1" class="clear-btn">Limpar Pesquisa</button>
+            <button type="submit" name="clear_search" value="1">Limpar Pesquisa</button>
+            <a href="cadastro_fornecedores.php"><button type="button">Cadastro de Fornecedor</button></a>
         </div>
     </form>
 
     <!-- Exibe os resultados da pesquisa, se houver -->
     <?php if (count($fornecedores) > 0): ?>
-        <table>
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nome</th>
-                    <th>CNPJ</th>
-                    <th>Endereço Completo</th>
-                    <th>Telefone</th>
-                    <th>E-mail</th>
-                    <th>Observações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($fornecedores as $fornecedor): ?>
+        <div class="table-container">
+            <table>
+                <thead>
                     <tr>
-                        <td data-label="Código"><?php echo htmlspecialchars($fornecedor['codigo']); ?></td>
-                        <td data-label="Nome"><?php echo htmlspecialchars($fornecedor['nome']); ?></td>
-                        <td data-label="CNPJ"><?php echo htmlspecialchars($fornecedor['cnpj']); ?></td>
-                        <td data-label="Endereço Completo"><?php echo htmlspecialchars($fornecedor['endereco']); ?></td>
-                        <td data-label="Telefone">
-                            <a href="https://wa.me/<?php echo str_replace(['(', ')', '-', ' '], '', htmlspecialchars($fornecedor['telefone'])); ?>" target="_blank">
-                                <?php echo htmlspecialchars($fornecedor['telefone']); ?>
-                            </a>
-                        </td>
-                        <td data-label="E-mail">
-                            <a href="mailto:<?php echo htmlspecialchars($fornecedor['email']); ?>">
-                                <?php echo htmlspecialchars($fornecedor['email']); ?>
-                            </a>
-                        </td>
-                        <td data-label="Observações"><?php echo htmlspecialchars($fornecedor['observacoes']); ?></td>
+                        <th>Código</th>
+                        <th>Nome</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-
-        <!-- Botão de Download XLSX -->
-        <div class="btn-container">
-            <a href="http://127.0.0.1:5000/download_xlsx_fornecedores?search=<?php echo urlencode($searchTerm); ?>">
-                <button type="button">Download XLSX (Planilha)</button>
-            </a>
+                </thead>
+                <tbody>
+                    <?php foreach ($fornecedores as $fornecedor): ?>
+                        <tr>
+                            <td><a href="javascript:void(0);" onclick="openModal(<?php echo $fornecedor['id']; ?>)"><?php echo htmlspecialchars($fornecedor['codigo']); ?></a></td>
+                            <td><a href="javascript:void(0);" onclick="openModal(<?php echo $fornecedor['id']; ?>)"><?php echo htmlspecialchars($fornecedor['nome']); ?></a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
-
-    <?php elseif ($searchTerm): ?>
+    <?php else: ?>
         <p>Nenhum fornecedor encontrado.</p>
     <?php endif; ?>
 
-    <!-- Link para a página de cadastro de fornecedores -->
-    <div class="content-footer">
-        <a href="cadastro_fornecedores.php">Ir para página de Cadastro de Fornecedores</a>
-    </div>
-
 </div>
+
+<!-- Modal para Edição -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Editar Fornecedor</h2>
+        <form method="POST" action="consulta_fornecedores.php">
+            <input type="hidden" name="id" id="fornecedor_id">
+            <label for="codigo">Código:</label>
+            <input type="text" name="codigo" id="codigo" readonly>
+            <label for="nome">Nome:</label>
+            <input type="text" name="nome" id="nome" readonly>
+            <label for="cnpj">CNPJ:</label>
+            <input type="text" name="cnpj" id="cnpj" readonly>
+            <label for="endereco">Endereço:</label>
+            <input type="text" name="endereco" id="endereco" readonly>
+            <label for="telefone">Telefone:</label>
+            <input type="text" name="telefone" id="telefone" readonly>
+            <label for="email">E-mail:</label>
+            <input type="email" name="email" id="email" readonly>
+            <label for="observacoes">Observações:</label>
+            <textarea name="observacoes" id="observacoes" readonly></textarea>
+            <button type="submit" name="update_fornecedor" id="saveBtn" style="display: none;">Salvar</button>
+            <button type="button" class="action-button" id="editBtn" onclick="enableEditing()">Editar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Função para abrir o modal e carregar os dados do fornecedor
+function openModal(id) {
+    var modal = document.getElementById("editModal");
+    modal.style.display = "block";
+
+    // Carregar os dados do fornecedor no formulário via requisição GET
+    fetch('consulta_fornecedores.php?get_fornecedor_id=' + id)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('fornecedor_id').value = data.id;
+            document.getElementById('codigo').value = data.codigo;
+            document.getElementById('nome').value = data.nome;
+            document.getElementById('cnpj').value = data.cnpj;
+            document.getElementById('endereco').value = data.endereco;
+            document.getElementById('telefone').value = data.telefone;
+            document.getElementById('email').value = data.email;
+            document.getElementById('observacoes').value = data.observacoes;
+        });
+}
+
+// Função para habilitar a edição no modal
+function enableEditing() {
+    var inputs = document.querySelectorAll('#editModal input, #editModal textarea');
+    inputs.forEach(input => {
+        input.removeAttribute('readonly'); // Remover a restrição readonly
+    });
+    document.getElementById('saveBtn').style.display = 'inline-block'; // Exibe o botão Salvar
+    document.getElementById('editBtn').style.display = 'none'; // Esconde o botão Editar
+}
+
+// Função para fechar o modal
+function closeModal() {
+    var modal = document.getElementById("editModal");
+    modal.style.display = "none";
+}
+</script>
 
 </body>
 </html>

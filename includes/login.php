@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Combraz</title>
+    <title>Login - LicitaSis</title>
 
     <!-- Estilo CSS -->
     <style>
@@ -180,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <header>
     <!-- Logo ComBraz centralizada -->
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo ComBraz" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo ComBraz" class="logo">
 </header>
 
 <div class="container">

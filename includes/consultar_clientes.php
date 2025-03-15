@@ -19,9 +19,9 @@ require_once('../includes/db.php');
 if (isset($_GET['search']) && !empty($_GET['search'])) {
     $searchTerm = $_GET['search'];
     
-    // Consulta ao banco de dados para pesquisar clientes por UASG, Nome ou CNPJ
+    // Consulta ao banco de dados para pesquisar clientes por Nome ou UASG
     try {
-        $sql = "SELECT * FROM clientes WHERE uasg LIKE :searchTerm OR nome_orgaos LIKE :searchTerm OR cnpj LIKE :searchTerm";
+        $sql = "SELECT * FROM clientes WHERE nome_orgaos LIKE :searchTerm OR uasg LIKE :searchTerm";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':searchTerm', "%$searchTerm%");
         $stmt->execute();
@@ -30,8 +30,8 @@ if (isset($_GET['search']) && !empty($_GET['search'])) {
     } catch (PDOException $e) {
         $error = "Erro na consulta: " . $e->getMessage();
     }
-} elseif (isset($_GET['show_all'])) {
-    // Consulta para mostrar todos os clientes
+} else {
+    // Consulta para mostrar todos os clientes ao carregar a página
     try {
         $sql = "SELECT * FROM clientes ORDER BY nome_orgaos ASC";
         $stmt = $pdo->prepare($sql);
@@ -74,26 +74,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
         $stmt->bindParam(':id', $id);
         $stmt->execute();
 
-        // Verifica se o email já existe na tabela 'clientes' antes de inserir
-        $sql_check_email = "SELECT COUNT(*) FROM clientes WHERE email = :email AND id != :id";
-        $stmt_check_email = $pdo->prepare($sql_check_email);
-        $stmt_check_email->bindParam(':email', $email);
-        $stmt_check_email->bindParam(':id', $id);
-        $stmt_check_email->execute();
-        $email_exists = $stmt_check_email->fetchColumn();
-
-        if ($email_exists == 0) {
-            // Se o email não existir, atualiza a coluna email
-            $sql_update_email = "UPDATE clientes SET email = :email WHERE id = :id";
-            $stmt_update_email = $pdo->prepare($sql_update_email);
-            $stmt_update_email->bindParam(':email', $email);
-            $stmt_update_email->bindParam(':id', $id);
-            $stmt_update_email->execute();
-        }
-
         $success = "Cliente atualizado com sucesso!";
+        // Redireciona para a página de consulta de clientes
+        header("Location: consultar_clientes.php?success=$success");
+        exit();
     } catch (PDOException $e) {
         $error = "Erro ao atualizar o cliente: " . $e->getMessage();
+    }
+}
+
+// Verifica se foi feita uma requisição AJAX para pegar os dados do cliente
+if (isset($_GET['get_cliente_id'])) {
+    $id = $_GET['get_cliente_id'];
+    try {
+        $sql = "SELECT * FROM clientes WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        
+        $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode($cliente); // Retorna os dados do cliente em formato JSON
+        exit();
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Erro ao buscar cliente: ' . $e->getMessage()]);
+        exit();
     }
 }
 ?>
@@ -105,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de Clientes - ComBraz</title>
     <style>
-        /* Estilos e layout existentes */
+        /* Estilos gerais */
         html, body {
             height: 100%;
             margin: 0;
@@ -150,9 +155,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
         }
 
         .container {
-            max-width: 100%;
+            max-width: 40%;
             margin: 50px auto;
-            background-color:rgb(215, 212, 212);
+            background-color: rgb(215, 212, 212);
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(240, 240, 240, 0.1);
@@ -176,9 +181,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
 
         table th, table td {
             border: 1px solid #000;
-            padding: 8px;
+            padding: 6px 10px;
             text-align: left;
             white-space: nowrap;
+            margin: 0;
         }
 
         table th {
@@ -193,72 +199,142 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
             max-height: 400px;
             overflow-y: auto;
             width: 100%;
-            overflow-x: auto;
+            overflow-x: auto; /* Habilita a rolagem horizontal se necessário */
         }
 
-        .content-footer {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
+        /* Estilos do Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding-top: 60px;
+            overflow: auto;
         }
 
-        .content-footer a {
-            background-color: #00bfae;
-            color: white;
-            padding: 12px 30px;
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px; /* Ajusta a largura */
+            height: auto;
+            max-height: 70%; /* Ajusta a altura */
+            overflow-y: auto; /* Habilita a rolagem vertical se o conteúdo for maior que o modal */
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
             text-decoration: none;
-            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .modal-content form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
             border-radius: 5px;
-            transition: background-color 0.3s ease;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            box-sizing: border-box;
         }
 
-        .content-footer a:hover {
-            background-color: #009d8f;
-        }
-
-        .btn-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
-
-        .btn-container button {
-            width: auto;
-            padding: 12px 30px;
+        .modal-content button {
+            padding: 12px 20px;
             font-size: 16px;
             background-color: #00bfae;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin: 5px;
         }
 
-        .btn-container button:hover {
+        .modal-content button:hover {
             background-color: #009d8f;
         }
 
-        /* Estilos de busca */
-        input[type="text"], input[type="email"], textarea {
-            width: 100%;
-            padding: 12px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        /* Estilos do botão de logout e outros */
+        .action-button {
+            padding: 12px 20px;
             font-size: 16px;
-            box-sizing: border-box;
+            background-color: #00bfae;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
+        .action-button:hover {
+            background-color: #009d8f;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        /* Estilização do campo de pesquisa */
         .search-bar {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            align-items: center;
             margin-bottom: 20px;
         }
 
-        .search-bar label {
-            margin-bottom: 10px;
-            font-weight: bold;
+        .search-bar input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+
+        .search-bar input:focus {
+            border-color: #00bfae;
+            outline: none;
+        }
+
+        /* Responsividade */
+        @media screen and (max-width: 768px) {
+            .modal-content {
+                width: 90%;
+                padding: 15px;
+            }
+
+            .modal-content input, .modal-content textarea {
+                font-size: 14px;
+            }
+
+            table th, table td {
+                padding: 4px 8px;
+            }
+
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
         }
 
     </style>
@@ -266,17 +342,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">Vendas</a>
 </nav>
 
 <div class="container">
@@ -285,17 +362,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
     <?php if ($error) { echo "<p class='error'>$error</p>"; } ?>
     <?php if ($success) { echo "<p class='success'>$success</p>"; } ?>
 
-    <!-- Formulário de pesquisa -->
     <form action="consultar_clientes.php" method="GET">
         <div class="search-bar">
-            <label for="search">Pesquisar por Uasg, Nome ou CNPJ:</label>
-            <input type="text" name="search" id="search" placeholder="Digite Uasg, Nome ou CNPJ" value="<?php echo htmlspecialchars($searchTerm); ?>">
+            <label for="search">Pesquisar por Nome ou UASG:</label>
+            <input type="text" name="search" id="search" placeholder="Digite o Nome ou UASG" value="<?php echo htmlspecialchars($searchTerm); ?>">
         </div>
 
         <div class="btn-container">
-            <button type="submit">Pesquisar</button>
-            <button type="submit" name="show_all" value="1">Mostrar Todos os Clientes</button>
-            <button type="submit" name="clear_search" value="1" class="clear-btn">Limpar Pesquisa</button>
+            <button type="submit" class="action-button">Pesquisar</button>
+            <button type="submit" name="clear_search" value="1" class="action-button">Limpar Pesquisa</button>
+            <a href="cadastrar_clientes.php"><button type="button" class="action-button">Cadastro de Clientes</button></a>
         </div>
     </form>
 
@@ -305,85 +381,86 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client'])) {
             <table>
                 <thead>
                     <tr>
-                        <th>Uasg</th>
-                        <th>CNPJ</th>
                         <th>Nome do Órgão</th>
-                        <th>Endereço Completo</th>
-                        <th>Telefone</th>
-                        <th>E-mail</th>
-                        <th>Observações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($clientes as $cliente): ?>
-                        <tr id="cliente-<?php echo $cliente['id']; ?>">
-                            <td data-label="Uasg"><?php echo htmlspecialchars($cliente['uasg']); ?></td>
-                            <td data-label="CNPJ"><?php echo htmlspecialchars($cliente['cnpj']); ?></td>
-                            <td data-label="Nome do Órgão"><?php echo htmlspecialchars($cliente['nome_orgaos']); ?></td>
-                            <td data-label="Endereço Completo"><?php echo htmlspecialchars($cliente['endereco']); ?></td>
-                            <td data-label="Telefone">
-                                <?php 
-                                    $telefones = explode('/', $cliente['telefone']);
-                                    foreach ($telefones as $telefone) {
-                                        $telefone = trim($telefone);
-                                        echo "<a href='https://wa.me/" . str_replace(['(', ')', '-', ' '], '', $telefone) . "' target='_blank'>$telefone</a><br>";
-                                    }
-                                ?>
-                            </td>
-                            <td data-label="E-mail">
-                                <?php 
-                                    $emails = explode('/', $cliente['email']);
-                                    foreach ($emails as $email) {
-                                        $email = trim($email);
-                                        echo "<a href='mailto:$email'>$email</a><br>";
-                                    }
-                                ?>
-                            </td>
-                            <td data-label="Observações"><?php echo htmlspecialchars($cliente['observacoes']); ?></td>
-                            <td data-label="Ação">
-                                <!-- Botão de Editar -->
-                                <button onclick="editClient(<?php echo $cliente['id']; ?>)">Editar</button>
-                            </td>
-                        </tr>
-
-                        <!-- Formulário de Edição -->
-                        <tr class="edit-form" id="edit-form-<?php echo $cliente['id']; ?>" style="display:none;">
-                            <form method="POST" action="consultar_clientes.php">
-                                <input type="hidden" name="id" value="<?php echo $cliente['id']; ?>">
-                                <td><input type="text" name="uasg" value="<?php echo htmlspecialchars($cliente['uasg']); ?>"></td>
-                                <td><input type="text" name="cnpj" value="<?php echo htmlspecialchars($cliente['cnpj']); ?>"></td>
-                                <td><input type="text" name="nome_orgaos" value="<?php echo htmlspecialchars($cliente['nome_orgaos']); ?>"></td>
-                                <td><input type="text" name="endereco" value="<?php echo htmlspecialchars($cliente['endereco']); ?>"></td>
-                                <td><input type="text" name="telefone" value="<?php echo htmlspecialchars($cliente['telefone']); ?>"></td>
-                                <td><input type="text" name="email" value="<?php echo htmlspecialchars($cliente['email']); ?>"></td>
-                                <td><textarea name="observacoes"><?php echo htmlspecialchars($cliente['observacoes']); ?></textarea></td>
-                                <td><button type="submit" name="update_client">Salvar</button></td>
-                            </form>
+                        <tr>
+                            <td><a href="javascript:void(0);" onclick="openModal(<?php echo $cliente['id']; ?>)"><?php echo htmlspecialchars($cliente['nome_orgaos']); ?></a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
-
-    <?php elseif ($searchTerm): ?>
+    <?php else: ?>
         <p>Nenhum cliente encontrado.</p>
     <?php endif; ?>
+</div>
 
-    <div class="content-footer">
-        <a href="cadastrar_clientes.php">Ir para página de Cadastro de Clientes</a>
+<!-- Modal para Edição -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Editar Cliente</h2>
+        <form method="POST" action="consultar_clientes.php">
+            <input type="hidden" name="id" id="client_id">
+            <label for="uasg">Uasg:</label>
+            <input type="text" name="uasg" id="uasg" readonly>
+            <label for="cnpj">CNPJ:</label>
+            <input type="text" name="cnpj" id="cnpj" readonly>
+            <label for="nome_orgaos">Nome do Órgão:</label>
+            <input type="text" name="nome_orgaos" id="nome_orgaos" readonly>
+            <label for="endereco">Endereço:</label>
+            <input type="text" name="endereco" id="endereco" readonly>
+            <label for="telefone">Telefone:</label>
+            <input type="text" name="telefone" id="telefone" readonly>
+            <label for="email">E-mail:</label>
+            <input type="email" name="email" id="email" readonly>
+            <label for="observacoes">Observações:</label>
+            <textarea name="observacoes" id="observacoes" readonly></textarea>
+            <button type="submit" name="update_client" id="saveBtn" style="display: none;">Salvar</button>
+            <button type="button" class="action-button" id="editBtn" onclick="enableEditing()">Editar</button>
+        </form>
     </div>
-
 </div>
 
 <script>
-    // Função para mostrar o formulário de edição e esconder a linha original
-    function editClient(id) {
-        var form = document.getElementById("edit-form-" + id);
-        var row = document.getElementById("cliente-" + id);
-        
-        form.style.display = "table-row";
-        row.style.display = "none";
-    }
+// Função para abrir o modal e carregar os dados do cliente
+function openModal(id) {
+    var modal = document.getElementById("editModal");
+    modal.style.display = "block";
+
+    // Carregar os dados do cliente no formulário via requisição GET
+    fetch('consultar_clientes.php?get_cliente_id=' + id)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('client_id').value = data.id;
+            document.getElementById('uasg').value = data.uasg;
+            document.getElementById('cnpj').value = data.cnpj;
+            document.getElementById('nome_orgaos').value = data.nome_orgaos;
+            document.getElementById('endereco').value = data.endereco;
+            document.getElementById('telefone').value = data.telefone;
+            document.getElementById('email').value = data.email;
+            document.getElementById('observacoes').value = data.observacoes;
+        });
+}
+
+// Função para habilitar a edição no modal
+function enableEditing() {
+    var inputs = document.querySelectorAll('#editModal input, #editModal textarea');
+    inputs.forEach(input => {
+        input.removeAttribute('readonly'); // Remover a restrição readonly
+    });
+    document.getElementById('saveBtn').style.display = 'inline-block'; // Exibe o botão Salvar
+    document.getElementById('editBtn').style.display = 'none'; // Esconde o botão Editar
+}
+
+// Função para fechar o modal
+function closeModal() {
+    var modal = document.getElementById("editModal");
+    modal.style.display = "none";
+}
 </script>
 
 </body>

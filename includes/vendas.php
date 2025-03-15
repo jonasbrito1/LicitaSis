@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faturamentos</title>
+    <title>Vendas</title>
     <style>
         /* Estilos globais */
         html, body {
@@ -117,25 +117,26 @@ if (!isset($_SESSION['user'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">vendas</a>
 </nav>
 
 <div class="container">
-    <h2>Faturamentos</h2>
+    <h2>Vendas</h2>
 
     <div class="btn-container">
-        <a href="cadastro_faturamento.php">Cadastrar Faturamento</a>
-        <a href="consulta_faturamento.php">Consultar Faturamento</a>
+        <a href="cadastro_vendas.php">Cadastrar vendas</a>
+        <a href="consulta_vendas.php">Consultar vendas</a>
     </div>
 
     <div class="content-footer">

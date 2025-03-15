@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         // Insere no banco de dados
-        $sql = "INSERT INTO faturamentos (numero, cliente_uasg, produto, item, transportadora, observacao, pregão, upload, nf, data) 
+        $sql = "INSERT INTO vendas (numero, cliente_uasg, produto, item, transportadora, observacao, pregão, upload, nf, data) 
                 VALUES (:numero, :cliente_uasg, :produto, :item, :transportadora, :observacao, :pregao, :upload, :nf, :data)";
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':numero', $numero, PDO::PARAM_STR);
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->execute()) {
             $success = true;
         } else {
-            throw new Exception("Erro ao cadastrar o faturamento.");
+            throw new Exception("Erro ao cadastrar venda.");
         }
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro de Faturamento - Licita Sis</title>
+    <title>Cadastro de vendas - Licita Sis</title>
     <style>
         /* Estilos e layout */
         html, body {
@@ -258,25 +258,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo" class="logo">
 </header>
 
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">Vendas</a>
 </nav>
 
 <div class="container">
-    <h2>Cadastro de Faturamento</h2>
+    <h2>Cadastro de Vendas</h2>
 
     <?php if ($error) { echo "<p class='error' style='color: red; text-align: center;'>$error</p>"; } ?>
 
-    <form action="cadastro_faturamento.php" method="POST" enctype="multipart/form-data">
+    <form action="cadastro_vendas.php" method="POST" enctype="multipart/form-data">
         <label for="numero">Número:</label>
         <input type="text" id="numero" name="numero" required>
 
@@ -308,13 +309,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <input type="date" id="data" name="data" required>
 
         <div class="btn-container">
-            <button type="submit">Cadastrar Faturamento</button>
+            <button type="submit">Cadastrar Vendas</button>
             <button type="reset">Limpar</button>
         </div>
     </form>
 
     <div class="content-footer">
-        <a href="consulta_faturamento.php">Ir para página de Consulta de Faturamento</a>
+        <a href="consulta_vendas.php">Consulta de vendas</a>
     </div>
 </div>
 
@@ -323,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div id="successModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                Faturamento Cadastrado com Sucesso!
+                Venda Cadastrada com Sucesso!
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
             <div class="modal-footer">
@@ -343,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Função para resetar a página
         function resetPage() {
-            window.location = "cadastro_faturamento.php"; // Redireciona para a página de cadastro novamente
+            window.location = "cadastro_vendas.php"; // Redireciona para a página de cadastro novamente
         }
     </script>
 <?php } ?>

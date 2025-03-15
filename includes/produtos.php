@@ -117,17 +117,18 @@ if (!isset($_SESSION['user'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
 <nav>
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendass.php">Vendas</a>
 </nav>
 
 <div class="container">

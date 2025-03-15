@@ -258,7 +258,7 @@ if (isset($_GET['clear_search'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
 <!-- Menu de navegação -->
@@ -266,10 +266,11 @@ if (isset($_GET['clear_search'])) {
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="Vendas.php">Vendas</a>
 </nav>
 
 <div class="container">
@@ -348,7 +349,7 @@ if (isset($_GET['clear_search'])) {
 
     <!-- Link para a página de cadastro de empenho -->
     <div class="content-footer">
-        <a href="cadastro_empenho.php" target="_blank">Ir para página de Cadastro de Empenho</a>
+        <a href="cadastro_empenho.php">Ir para página de Cadastro de Empenho</a>
     </div>
 
 </div>

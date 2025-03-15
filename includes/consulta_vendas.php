@@ -9,7 +9,7 @@ if (!isset($_SESSION['user'])) {
 
 $error = "";
 $success = "";
-$faturamentos = [];
+$vendas = [];
 $searchTerm = "";
 
 // Conexão com o banco de dados
@@ -19,33 +19,33 @@ require_once('../includes/db.php');
 if (isset($_GET['search']) && !empty($_GET['search'])) {
     $searchTerm = $_GET['search'];
     
-    // Consulta ao banco de dados para pesquisar faturamentos por número, cliente ou produto
+    // Consulta ao banco de dados para pesquisar vendas por número, cliente ou produto
     try {
-        $sql = "SELECT * FROM faturamentos WHERE numero LIKE :searchTerm OR cliente_uasg LIKE :searchTerm OR produto LIKE :searchTerm";
+        $sql = "SELECT * FROM vendas WHERE numero LIKE :searchTerm OR cliente_uasg LIKE :searchTerm OR produto LIKE :searchTerm";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':searchTerm', "%$searchTerm%");
         $stmt->execute();
         
-        $faturamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $vendas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $error = "Erro na consulta: " . $e->getMessage();
     }
 } elseif (isset($_GET['show_all'])) {
-    // Consulta para mostrar todos os faturamentos
+    // Consulta para mostrar todos os vendas
     try {
-        $sql = "SELECT * FROM faturamentos ORDER BY numero ASC";
+        $sql = "SELECT * FROM vendas ORDER BY numero ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
         
-        $faturamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $vendas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        $error = "Erro ao buscar todos os faturamentos: " . $e->getMessage();
+        $error = "Erro ao buscar todos os vendas: " . $e->getMessage();
     }
 }
 
 // Limpa a pesquisa ao resetar a página
 if (isset($_GET['clear_search'])) {
-    header("Location: consulta_faturamento.php");
+    header("Location: consulta_vendas.php");
     exit();
 }
 ?>
@@ -55,7 +55,7 @@ if (isset($_GET['clear_search'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de Faturamento - Licita Sis</title>
+    <title>Consulta de vendas - Licita Sis</title>
     <style>
         /* Adiciona rolagem vertical à página */
         html, body {
@@ -254,7 +254,7 @@ if (isset($_GET['clear_search'])) {
 <body>
 
 <header>
-    <img src="../public_html/assets/images/licitasis.png" alt="Logo LicitaSis" class="logo">
+    <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
 </header>
 
 <!-- Menu de navegação -->
@@ -262,21 +262,22 @@ if (isset($_GET['clear_search'])) {
     <a href="sistema.php">Início</a>
     <a href="clientes.php">Clientes</a>
     <a href="produtos.php">Produtos</a>
+    <a href="empenhos.php">Empenhos</a>
     <a href="financeiro.php">Financeiro</a>
     <a href="transportadoras.php">Transportadoras</a>
     <a href="fornecedores.php">Fornecedores</a>
-    <a href="faturamentos.php">Faturamento</a>
+    <a href="vendas.php">Vendas</a>
 </nav>
 
 <div class="container">
-    <h2>Consulta de Faturamentos</h2>
+    <h2>Consulta de vendas</h2>
 
     <!-- Exibe a mensagem de erro ou sucesso -->
     <?php if ($error) { echo "<p class='error'>$error</p>"; } ?>
     <?php if ($success) { echo "<p class='success'>$success</p>"; } ?>
 
     <!-- Formulário de pesquisa -->
-    <form action="consulta_faturamento.php" method="GET">
+    <form action="consulta_vendas.php" method="GET">
         <div class="search-bar">
             <label for="search">Pesquisar por Número, Cliente ou Produto:</label>
             <input type="text" name="search" id="search" placeholder="Digite Número, Cliente ou Produto" value="<?php echo htmlspecialchars($searchTerm); ?>">
@@ -284,13 +285,13 @@ if (isset($_GET['clear_search'])) {
 
         <div class="btn-container">
             <button type="submit">Pesquisar</button>
-            <button type="submit" name="show_all" value="1">Mostrar Todos os Faturamentos</button>
+            <button type="submit" name="show_all" value="1">Mostrar Todos os vendass</button>
             <button type="submit" name="clear_search" value="1" class="clear-btn">Limpar Pesquisa</button>
         </div>
     </form>
 
     <!-- Exibe os resultados da pesquisa, se houver -->
-    <?php if (count($faturamentos) > 0): ?>
+    <?php if (count($vendass) > 0): ?>
         <table>
             <thead>
                 <tr>
@@ -307,38 +308,38 @@ if (isset($_GET['clear_search'])) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($faturamentos as $faturamento): ?>
+                <?php foreach ($vendass as $vendas): ?>
                     <tr>
-                        <td data-label="Número"><?php echo htmlspecialchars($faturamento['numero']); ?></td>
-                        <td data-label="Cliente (UASG)"><?php echo htmlspecialchars($faturamento['cliente_uasg']); ?></td>
-                        <td data-label="Produto"><?php echo htmlspecialchars($faturamento['produto']); ?></td>
-                        <td data-label="Item"><?php echo htmlspecialchars($faturamento['item']); ?></td>
-                        <td data-label="Transportadora"><?php echo htmlspecialchars($faturamento['transportadora']); ?></td>
-                        <td data-label="Observações"><?php echo htmlspecialchars($faturamento['observacao']); ?></td>
-                        <td data-label="Pregão"><?php echo htmlspecialchars($faturamento['pregao']); ?></td>
+                        <td data-label="Número"><?php echo htmlspecialchars($vendas['numero']); ?></td>
+                        <td data-label="Cliente (UASG)"><?php echo htmlspecialchars($vendas['cliente_uasg']); ?></td>
+                        <td data-label="Produto"><?php echo htmlspecialchars($vendas['produto']); ?></td>
+                        <td data-label="Item"><?php echo htmlspecialchars($vendas['item']); ?></td>
+                        <td data-label="Transportadora"><?php echo htmlspecialchars($vendas['transportadora']); ?></td>
+                        <td data-label="Observações"><?php echo htmlspecialchars($vendas['observacao']); ?></td>
+                        <td data-label="Pregão"><?php echo htmlspecialchars($vendas['pregao']); ?></td>
                         <td data-label="Comprovante">
-                            <a href="../uploads/<?php echo htmlspecialchars($faturamento['upload']); ?>" target="_blank">Download</a>
+                            <a href="../uploads/<?php echo htmlspecialchars($vendas['upload']); ?>" target="_blank">Download</a>
                         </td>
                         <td data-label="Nota Fiscal">
-                            <a href="../uploads/nf/<?php echo htmlspecialchars($faturamento['nf']); ?>" target="_blank">Download</a>
+                            <a href="../uploads/nf/<?php echo htmlspecialchars($vendas['nf']); ?>" target="_blank">Download</a>
                         </td>
-                        <td data-label="Data"><?php echo htmlspecialchars($faturamento['data']); ?></td>
+                        <td data-label="Data"><?php echo htmlspecialchars($vendas['data']); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
 
         <div class="btn-container">
-            <a href="http://127.0.0.1:5000/download_xlsx_faturamentos?search=<?php echo urlencode($searchTerm); ?>">
+            <a href="http://127.0.0.1:5000/download_xlsx_vendas?search=<?php echo urlencode($searchTerm); ?>">
                 <button type="button">Download XLSX (Planilha)</button>
             </a>
         </div>
     <?php elseif ($searchTerm): ?>
-        <p>Nenhum faturamento encontrado.</p>
+        <p>Nenhuma venda encontrada.</p>
     <?php endif; ?>
 
     <div class="content-footer">
-        <a href="cadastro_faturamento.php">Ir para página de Cadastro de Faturamento</a>
+        <a href="cadastro_vendas.php">Cadastro de vendas</a>
     </div>
 
 </div>
