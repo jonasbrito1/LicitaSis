@@ -1,0 +1,688 @@
+Lista de Eventos - A MOSTRAR 200 REGISTOS
+Tipo;"Data";"Fonte";"Categoria";"ID do Evento";"Utilizador";"Computador"
+Informação;"2025-03-19 09:45:06";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar automaticamente para iniciar demanda."
+Aviso;"2025-03-19 09:34:35";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{2593F8B9-4EAF-457C-B68A-50F6B8EA6B54}
+
+ e APPID 
+
+{15C20B67-12E7-4BB6-92BB-7AFF07997402}
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Informação;"2025-03-19 09:32:59";"Volsnap";"0 - (0)";"33";"N/A";"BYOD-EDUARDO";"A cópia de sombra mais antiga do volume C: foi excluída para manter o uso de espaço em disco para cópias de sombra do volume C: abaixo do limite definido pelo usuário."
+Informação;"2025-03-19 09:32:28";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume ?? (\Device\HarddiskVolumeShadowCopy434) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:31:37";"Microsoft-Windows-UserModePowerService";"0 - (10)";"12";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processo C:\Windows\SysWOW64\powercfg.exe (ID do processo:10224) redefiniu o esquema de política de {381b4222-f694-41f0-9685-ff5bb260df2e} para {381b4222-f694-41f0-9685-ff5bb260df2e}"
+Informação;"2025-03-19 09:31:37";"Microsoft-Windows-UserModePowerService";"0 - (10)";"12";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processo C:\Windows\SysWOW64\powercfg.exe (ID do processo:2312) redefiniu o esquema de política de {381b4222-f694-41f0-9685-ff5bb260df2e} para {381b4222-f694-41f0-9685-ff5bb260df2e}"
+Informação;"2025-03-19 09:30:33";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar demanda para iniciar automaticamente."
+Informação;"2025-03-19 09:29:12";"Volsnap";"0 - (0)";"33";"N/A";"BYOD-EDUARDO";"A cópia de sombra mais antiga do volume C: foi excluída para manter o uso de espaço em disco para cópias de sombra do volume C: abaixo do limite definido pelo usuário."
+Informação;"2025-03-19 09:29:01";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar automaticamente para iniciar demanda."
+Aviso;"2025-03-19 09:26:21";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.SecurityAppBroker
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário AUTORIDADE NT\SISTEMA SID (S-1-5-18) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:26:21";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscBrokerManager
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário AUTORIDADE NT\SISTEMA SID (S-1-5-18) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Erro;"2025-03-19 09:26:08";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - WAHP49BFA1 devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 09:26:08";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - VFVXVRSPWK devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 09:26:08";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - MK6G9A7BGH devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 09:26:08";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - KZNCME2FJ8 devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 09:26:08";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - 65F4EF1LVV devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Aviso;"2025-03-19 09:26:07";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{2593F8B9-4EAF-457C-B68A-50F6B8EA6B54}
+
+ e APPID 
+
+{15C20B67-12E7-4BB6-92BB-7AFF07997402}
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:26:03";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Erro;"2025-03-19 09:26:02";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Serviço do Google Update (gupdate) devido ao seguinte erro: 
+
+O serviço não respondeu à requisição de início ou controle em tempo hábil."
+Erro;"2025-03-19 09:26:02";"Service Control Manager";"0 - (0)";"7009";"N/A";"BYOD-EDUARDO";"Tempo limite esgotado (120000 milissegundos) ao aguardar a conexão do serviço Serviço do Google Update (gupdate)."
+Aviso;"2025-03-19 09:25:59";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:25:56";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:24:38";"Microsoft-Windows-Kernel-Processor-Power";"0 - (7)";"37";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A velocidade do processador 7 no grupo 0 está sendo limitada pelo firmware do sistema. O processador está neste estado de desempenho reduzido há 71 segundos desde o último relatório."
+Aviso;"2025-03-19 09:24:34";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:24:34";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:24:34";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 09:24:34";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Informação;"2025-03-19 09:24:32";"Microsoft-Windows-Winlogon";"0 - (1101)";"7001";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Notificação de Logon do Usuário para Programa de Aperfeiçoamento da Experiência do Usuário"
+Informação;"2025-03-19 09:24:19";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Instalador de Módulos do Windows foi alterado de iniciar automaticamente para iniciar demanda."
+Informação;"2025-03-19 09:24:16";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume ?? (\Device\HarddiskVolumeShadowCopy431) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:23:56";"Microsoft-Windows-TPM-WMI";"0 - (0)";"1025";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O TPM foi provisionado com êxito e agora está pronto para uso."
+Informação;"2025-03-19 09:23:55";"Microsoft-Windows-TPM-WMI";"0 - (0)";"1282";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O identificador de dispositivo TBS foi gerado."
+Informação;"2025-03-19 09:23:54";"TPM";"0 - (0)";"18";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Este evento dispara a execução da verificação de status/provisionamento do TPM (Trusted Platform Module)."
+Informação;"2025-03-19 09:23:54";"Service Control Manager";"0 - (0)";"7026";"N/A";"BYOD-EDUARDO";"O(s) seguinte(s) driver(s) de início do sistema ou de inicialização não foram carregados: 
+
+dam
+
+googledrivefs31357
+
+SentinelDeviceControl
+
+WinSetupMon"
+Informação;"2025-03-19 09:23:50";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço TrustedInstaller foi alterado de iniciar demanda para iniciar automaticamente."
+Informação;"2025-03-19 09:23:44";"Microsoft-Windows-WLAN-AutoConfig";"0 - (0)";"10001";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Módulo de Extensibilidade de WLAN iniciado com êxito.
+
+
+
+Caminho do Módulo: C:\WINDOWS\system32\IntelIHVRouter04.dll
+
+"
+Informação;"2025-03-19 09:23:44";"IntelHaxm";"Nenhuma - (0)";"4";"N/A";"BYOD-EDUARDO"
+Informação;"2025-03-19 09:23:45";"Microsoft-Windows-WAS";"0 - (0)";"5211";"N/A";"BYOD-EDUARDO";"O Serviço de Ativação de Processos do Windows (WAS) foi iniciado com o modo 'Classic' usando o 'ConfigurationSystem'"
+Informação;"2025-03-19 09:23:44";"Microsoft-Windows-WLAN-AutoConfig";"0 - (0)";"4000";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Serviço de Configuração Automática de WLAN iniciado com êxito.
+
+"
+Informação;"2025-03-19 09:23:43";"Microsoft-Windows-DHCPv6-Client";"Service State Event - (4)";"51046";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv6 foi iniciado"
+Informação;"2025-03-19 09:23:43";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50036";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv4 foi iniciado"
+Informação;"2025-03-19 09:23:43";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50103";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"Cliente DHCPv4 registrado para notificação de desligamento"
+Informação;"2025-03-19 09:23:43";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50036";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv4 foi iniciado"
+Informação;"2025-03-19 09:23:42";"Win32k";"0 - (0)";"267";"N/A";"BYOD-EDUARDO";"Êxito na verificação de Controle de Qualidade de Hardware de Toque/Teclado Sensível ao Toque."
+Informação;"2025-03-19 09:23:42";"Microsoft-Windows-UserModePowerService";"0 - (10)";"12";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processo C:\Windows\System32\svchost.exe (ID do processo:1612) redefiniu o esquema de política de {381b4222-f694-41f0-9685-ff5bb260df2e} para {381b4222-f694-41f0-9685-ff5bb260df2e}"
+Informação;"2025-03-19 09:23:41";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'bindflt' (10.0, ?2072?-?11?-?08T20:15:04.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:40";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'storqosflt' (10.0, ?1990?-?03?-?04T11:18:49.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:40";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (10.0, ?1980?-?07?-?08T02:32:35.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:40";"Microsoft-Windows-FilterManager";"0 - (0)";"1";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (Versão 10.0, ?1980?-?07?-?08T02:32:35.000000000Z) descarregado com sucesso."
+Informação;"2025-03-19 09:23:40";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (10.0, ?1980?-?07?-?08T02:32:35.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:39";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'luafv' (10.0, ?1995?-?09?-?15T01:15:24.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:38";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'wcifs' (10.0, ?2087?-?12?-?15T06:21:00.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:37";"Win32k";"0 - (0)";"267";"N/A";"BYOD-EDUARDO";"Êxito na verificação de Controle de Qualidade de Hardware de Toque/Teclado Sensível ao Toque."
+Informação;"2025-03-19 09:23:34";"Microsoft-Windows-Directory-Services-SAM";"0 - (0)";"16983";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O gerenciador de contas de segurança agora registra eventos resumidos periódicos para clientes remotos que invocam chamadas herdadas do método RPC para alterar ou definir senhas.
+
+
+
+Para mais informações, confira https://go.microsoft.com/fwlink/?linkid=2150956.
+
+"
+Informação;"2025-03-19 09:23:34";"Microsoft-Windows-Directory-Services-SAM";"0 - (0)";"16977";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O domínio tem as seguintes configurações de comprimento mínimo para senha.
+
+
+
+MinimumPasswordLength: 0
+
+
+
+RelaxMinimumPasswordLengthLimits: 0
+
+
+
+MinimumPasswordLengthAudit: -1
+
+
+
+Para mais informações, consulte https://go.microsoft.com/fwlink/?LinkId=2097191.
+
+"
+Informação;"2025-03-19 09:23:34";"Microsoft-Windows-Directory-Services-SAM";"0 - (0)";"16962";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As chamadas remotas ao banco de dados SAM estão sendo restritas usando o descritor de segurança padrão: O:SYG:SYD:(A;;RC;;;BA).
+
+Para obter mais informações, consulte http://go.microsoft.com/fwlink/?LinkId=787651."
+Informação;"2025-03-19 09:23:34";"Microsoft-Windows-Wininit";"0 - (0)";"14";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Configuração do Credential Guard: 0x0, 0"
+Erro;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"1060";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:33";"Microsoft-Windows-Kernel-PnP";"0 - (212)";"219";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O driver \Driver\ibtavflt falhou ao carregar para o dispositivo BTHENUM\{0000110e-0000-1000-8000-00805f9b34fb}_LOCALMFG&0002\7&2abc69ae&1&FC58FA1FA665_C00000000."
+Informação;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"26";"N/A";"BYOD-EDUARDO"
+Erro;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"1060";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:33";"Microsoft-Windows-Kernel-PnP";"0 - (212)";"219";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O driver \Driver\ibtavflt falhou ao carregar para o dispositivo BTHENUM\{0000110e-0000-1000-8000-00805f9b34fb}_VID&000105d6_PID&000a\7&2abc69ae&1&B5493787B939_C00000000."
+Informação;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"26";"N/A";"BYOD-EDUARDO"
+Erro;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"1060";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:33";"Microsoft-Windows-Kernel-PnP";"0 - (212)";"219";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O driver \Driver\ibtavflt falhou ao carregar para o dispositivo BTHENUM\{0000110e-0000-1000-8000-00805f9b34fb}_VID&00010008_PID&2e81\7&2abc69ae&1&74B05920DD2E_C00000000."
+Informação;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"26";"N/A";"BYOD-EDUARDO"
+Erro;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"1060";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:33";"Microsoft-Windows-Kernel-PnP";"0 - (212)";"219";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O driver \Driver\ibtavflt falhou ao carregar para o dispositivo BTHENUM\{0000110e-0000-1000-8000-00805f9b34fb}_VID&00010075_PID&0100\7&2abc69ae&1&70FD46432E45_C00000000."
+Informação;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"26";"N/A";"BYOD-EDUARDO"
+Erro;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"1060";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:33";"Microsoft-Windows-Kernel-PnP";"0 - (212)";"219";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O driver \Driver\ibtavflt falhou ao carregar para o dispositivo BTHENUM\{0000110e-0000-1000-8000-00805f9b34fb}_VID&000105d6_PID&000a\7&2abc69ae&1&53865D3A6D1D_C00000000."
+Informação;"2025-03-19 09:23:33";"Application Popup";"0 - (0)";"26";"N/A";"BYOD-EDUARDO"
+Aviso;"2025-03-19 09:23:32";"BTHUSB";"0 - (0)";"34";"N/A";"BYOD-EDUARDO";"O adaptador local não dá suporte a um estado de controlador de baixo consumo importante para compatibilidade com modo periférico. O valor mínimo necessário de máscara de estado com suporte é 0x2491f7fffff; valor obtido: 0x1fffffff. A funcionalidade de periférico de baixo consumo não estará disponível."
+Informação;"2025-03-19 09:23:32";"BTHUSB";"0 - (0)";"18";"N/A";"BYOD-EDUARDO";"O Windows não pode armazenar códigos de autenticação Bluetooth (chaves de link) no adaptador local. Os teclados Bluetooth podem não funcionar no BIOS do sistema durante a inicialização."
+Informação;"2025-03-19 09:23:28";"Netwtw04";"0 - (0)";"7010";"N/A";"BYOD-EDUARDO";"7010 - driver enabled (miniport init)"
+Informação;"2025-03-19 09:23:27";"MEIx64";"0 - (0)";"2";"N/A";"BYOD-EDUARDO";"Intel(R) Management Engine Interface driver has started successfully."
+Informação;"2025-03-19 09:23:27";"Netwtw04";"0 - (0)";"7036";"N/A";"BYOD-EDUARDO";"O serviço \Device\NDMP1 entrou no estado Intel(R) Dual Band Wireless-AC 3165."
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Power";"0 - (220)";"521";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Alteração na contagem de bateria ativa."
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Power";"0 - (220)";"521";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Alteração na contagem de bateria ativa."
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 7 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 5 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 3 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 1 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 6 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 4 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 2 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 45
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:27";"Microsoft-Windows-Kernel-Processor-Power";"0 - (47)";"55";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processador 0 no grupo 0 expõe os seguintes recursos de gerenciamento de energia:
+
+
+
+Tipo de estado ocioso: Estados da ACPI Ocioso (C) (3 estado(s))
+
+
+
+Tipo de estado de desempenho: Controle de Desempenho do Processador Colaborativo ACPI
+
+Frequência Nominal (MHz): 1992
+
+Percentual de desempenho máximo: 200
+
+Percentual de desempenho mínimo: 20
+
+Percentual de aceleração mínimo: 5"
+Informação;"2025-03-19 09:23:26";"Microsoft-Windows-Kernel-General";"0 - (11)";"24";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As informações de fuso horário foram atualizadas com o motivo de saída 0. O ajuste do fuso horário atual é 180."
+Informação;"2025-03-19 09:23:23";"Microsoft-Windows-Kernel-Power";"0 - (203)";"172";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Estado de conectividade em espera: Disconnected, Motivo: NIC compliance"
+Erro;"2025-03-19 09:23:23";"Microsoft-Windows-Kernel-Power";"0 - (63)";"41";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O sistema foi reiniciado sem um desligamento correto primeiro. Esse erro pode ser causado quando o sistema para de responder, trava ou fica sem energia inesperadamente."
+Informação;"2025-03-19 09:23:22";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume D: (\Device\HarddiskVolume3) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:23:22";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'npsvctrig' (10.0, ?2104?-?06?-?15T20:31:44.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:22";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume \\?\Volume{cd46d95e-cc16-4228-a0dc-7407bcdaf07d} (\Device\HarddiskVolume4) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:23:22";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'wsddfac' (10.0, ?2023?-?03?-?08T15:43:35.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:21";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'SentinelMonitor' (10.0, ?2024?-?03?-?23T01:01:12.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:21";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'FileCrypt' (10.0, ?2102?-?10?-?25T00:20:26.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:23:21";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume C: (\Device\HarddiskVolume6) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:23:20";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume \\?\Volume{6fde96e4-ca16-4777-b070-b2b52173254a} (\Device\HarddiskVolume7) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 09:20:48";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'Wof' (10.0, ?1994?-?05?-?18T07:17:40.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:20:48";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'FileInfo' (10.0, ?1970?-?09?-?03T19:56:45.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-HAL";"0 - (0)";"16";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O relatório de falhas de IOMMU foi inicializado."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-General";"0 - (6)";"20";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A configuração de segundo bissexto foi atualizada.
+
+Motivo: Leap second data initialized from registry during boot
+
+Segundos bissextos habilitados: true
+
+Nova contagem de segundos bissextos: 0
+
+Contagem antiga de segundos bissextos: 0"
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (21)";"30";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O firmware relatou métricas de inicialização."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (33)";"27";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização era 0x0."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (32)";"25";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A política do menu de inicialização era 0x1."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (101)";"238";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Diferença de fuso horário EFI: 2047. Sinalizadores de horário de verão: 0. Tempo do firmware: ?2025?-?03?-?19T09:20:45.000000000Z. "
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (31)";"20";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O status bem-sucedido do último desligamento era true. O status bem-sucedido da última inicialização era true."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (58)";"32";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O bootmgr gastou 0 ms aguardando a entrada do usuário."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (57)";"18";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Há 0x1 opções de inicialização no sistema."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-Boot";"0 - (62)";"153";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A segurança baseada em virtualização (políticas: 0) está disabled."
+Informação;"2025-03-19 09:23:42";"EventLog";"0 - (0)";"6013";"N/A";"BYOD-EDUARDO";"O tempo de ativação do sistema é 176 segundos."
+Informação;"2025-03-19 09:23:42";"EventLog";"0 - (0)";"6005";"N/A";"BYOD-EDUARDO";"O serviço Log de eventos foi iniciado."
+Informação;"2025-03-19 09:23:42";"EventLog";"0 - (0)";"6009";"N/A";"BYOD-EDUARDO";"Microsoft (R) Windows (R) 10.00. 22000  Multiprocessor Free."
+Informação;"2025-03-19 09:20:47";"Microsoft-Windows-Kernel-General";"0 - (1)";"12";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Sistema operacional iniciado na hora do sistema ?2025?-?03?-?19T12:20:45.500000000Z."
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50037";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv4 foi interrompido. O valor do Sinalizador de Desligamento é 1"
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50106";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O DHCPv4 está aguardando a interrupção do serviço DHCPv6"
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50105";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"ProcessDHCPRequestForever do cliente DHCPv4 recebeu TERMINATEEVENT"
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-DHCPv6-Client";"Service State Event - (4)";"51057";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"A interrupção do serviço do cliente DHCPv6 está quase concluída. A contagem de Referências de Contexto DHCP é 1"
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-DHCPv6-Client";"Service State Event - (4)";"51047";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv6 foi interrompido. O valor do Sinalizador de Desligamento é 1"
+Informação;"2025-03-19 09:14:30";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50104";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O cliente DHCPv4 recebeu uma notificação de desligamento"
+Erro;"2025-03-19 09:14:29";"Service Control Manager";"0 - (0)";"7034";"N/A";"BYOD-EDUARDO";"O serviço Network Management and Control foi encerrado inesperadamente.  Isso aconteceu 1 vez(es)."
+Erro;"2025-03-19 09:14:29";"Service Control Manager";"0 - (0)";"7043";"N/A";"BYOD-EDUARDO";"O serviço Sentinel Agent não foi desligado corretamente após receber um controle de pré-desligamento."
+Informação;"2025-03-19 09:14:30";"EventLog";"0 - (0)";"6006";"N/A";"BYOD-EDUARDO";"O serviço Log de eventos foi finalizado."
+Erro;"2025-03-19 09:14:17";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:16";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:15";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:14";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:13";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:12";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:11";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:10";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:09";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:08";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Erro;"2025-03-19 09:14:06";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10005";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O DCOM obteve o erro ""1115"" ao tentar iniciar o serviço TrustedInstaller com argumentos ""Não Disponível"" para executar o servidor:
+
+{752073A1-23F2-4396-85F0-8FDB879ED0ED}"
+Informação;"2025-03-19 09:14:01";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar demanda para iniciar automaticamente."
+Informação;"2025-03-19 09:13:58";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Instalador de Módulos do Windows foi alterado de iniciar automaticamente para iniciar demanda."
+Erro;"2025-03-19 09:13:56";"Server";"0 - (0)";"2505";"N/A";"BYOD-EDUARDO";"O servidor não pôde se associar ao transporte \Device\NetBT_Tcpip_{68E2533C-9442-4199-A311-AFD5F0912FB2} porque outro computador na rede tem o mesmo nome. Não foi possível iniciar o servidor."
+Aviso;"2025-03-19 09:13:51";"BTHUSB";"0 - (0)";"34";"N/A";"BYOD-EDUARDO";"O adaptador local não dá suporte a um estado de controlador de baixo consumo importante para compatibilidade com modo periférico. O valor mínimo necessário de máscara de estado com suporte é 0x2491f7fffff; valor obtido: 0x1fffffff. A funcionalidade de periférico de baixo consumo não estará disponível."
+Informação;"2025-03-19 09:13:51";"BTHUSB";"0 - (0)";"18";"N/A";"BYOD-EDUARDO";"O Windows não pode armazenar códigos de autenticação Bluetooth (chaves de link) no adaptador local. Os teclados Bluetooth podem não funcionar no BIOS do sistema durante a inicialização."
+Informação;"2025-03-19 09:13:49";"Microsoft-Windows-Kernel-Power";"0 - (268)";"566";"N/A";"BYOD-EDUARDO";"A sessão do sistema passou do 2 para o 4. 
+
+
+
+motivo: 1469"
+Informação;"2025-03-19 09:13:49";"Microsoft-Windows-Power-Troubleshooter";"0 - (0)";"1";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O sistema continuou após retornar do modo de suspensão.
+
+
+
+Hora da Suspensão: ?2025?-?03?-?19T11:00:16.501655700Z
+
+Hora da Ativação: ?2025?-?03?-?19T12:13:48.417984400Z
+
+
+
+Ativar Origem: Desconhecido"
+Informação;"2025-03-19 09:13:48";"Microsoft-Windows-Kernel-Power";"0 - (268)";"566";"N/A";"BYOD-EDUARDO";"A sessão do sistema passou do 1 para o 2. 
+
+
+
+motivo: 1469"
+Informação;"2025-03-19 09:13:47";"Microsoft-Windows-Kernel-Power";"0 - (33)";"131";"N/A";"BYOD-EDUARDO";"Horários do Firmware S3. ResumeCount: 1, FullResume: 495, AverageResume: 495"
+Informação;"2025-03-19 09:13:47";"Microsoft-Windows-Kernel-General";"0 - (5)";"1";"N/A";"BYOD-EDUARDO";"A hora do sistema foi alterada para ?2025?-?03?-?19T12:13:47.500000000Z de ?2025?-?03?-?19T11:00:19.040927900Z. motivo 
+
+
+
+alteração: System time synchronized with the hardware clock. 
+
+processo: '' (PID 4). 
+
+
+
+hora do RTC:  ?2025?-?03?-?19T09:13:47.500000000Z
+
+diferença de fuso horário atual:  180
+
+hora RTC está em UTC:  false
+
+hora do sistema foi baseada no tempo RTC:  false"
+Informação;"2025-03-19 08:00:19";"Microsoft-Windows-Kernel-Power";"0 - (102)";"107";"N/A";"BYOD-EDUARDO";"O sistema saiu do modo de suspensão."
+Informação;"2025-03-19 08:00:18";"Microsoft-Windows-Kernel-Power";"0 - (64)";"42";"N/A";"BYOD-EDUARDO";"O sistema está entrando em suspensão.
+
+
+
+Motivo da Suspensão: Button or Lid"
+Informação;"2025-03-19 08:00:16";"Microsoft-Windows-Kernel-Power";"0 - (268)";"566";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A sessão do sistema passou do 0 para o 1. 
+
+
+
+motivo: 1469"
+Erro;"2025-03-19 07:47:37";"Service Control Manager";"0 - (0)";"7043";"N/A";"BYOD-EDUARDO";"O serviço Backup Service Controller não foi desligado corretamente após receber um controle de pré-desligamento."
+Informação;"2025-03-19 07:47:31";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar automaticamente para iniciar demanda."
+Informação;"2025-03-19 07:47:21";"Microsoft-Windows-Winlogon";"0 - (1102)";"7002";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Notificação de Logoff do Usuário para Programa de Aperfeiçoamento da Experiência do Usuário"
+Informação;"2025-03-19 07:47:21";"User32";"0 - (0)";"1074";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processo C:\WINDOWS\system32\winlogon.exe (BYOD-EDUARDO) iniciou Desligado do computador BYOD-EDUARDO pelo usuário AUTORIDADE NT\SISTEMA por este motivo: Não foi encontrado um título para esta razão
+
+  Código do motivo: 0x500ff
+
+  Tipo de encerramento: Desligado
+
+  Comentário: "
+Erro;"2025-03-19 07:47:18";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10010";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"O servidor {FD06603A-2BDF-4BB1-B7DF-5DC68F353601} não se registrou no DCOM dentro do tempo limite necessário."
+Informação;"2025-03-19 07:47:17";"User32";"0 - (0)";"1074";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"O processo Explorer.EXE iniciou Desligado do computador BYOD-EDUARDO pelo usuário BYOD-EDUARDO\eddua por este motivo: Outro (não planejada)
+
+  Código do motivo: 0x0
+
+  Tipo de encerramento: Desligado
+
+  Comentário: "
+Aviso;"2025-03-19 07:46:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.SecurityAppBroker
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário AUTORIDADE NT\SISTEMA SID (S-1-5-18) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:46:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscBrokerManager
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário AUTORIDADE NT\SISTEMA SID (S-1-5-18) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Erro;"2025-03-19 07:46:35";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - WAHP49BFA1 devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 07:46:35";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - VFVXVRSPWK devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 07:46:35";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - MK6G9A7BGH devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 07:46:35";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - KZNCME2FJ8 devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 07:46:35";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Monitoramento de DF-e e integridade - SGBr Sistemas - 65F4EF1LVV devido ao seguinte erro: 
+
+O sistema não pode encontrar o arquivo especificado."
+Erro;"2025-03-19 07:46:33";"Service Control Manager";"0 - (0)";"7000";"N/A";"BYOD-EDUARDO";"Não foi possível iniciar o serviço Serviço do Google Update (gupdate) devido ao seguinte erro: 
+
+O serviço não respondeu à requisição de início ou controle em tempo hábil."
+Erro;"2025-03-19 07:46:33";"Service Control Manager";"0 - (0)";"7009";"N/A";"BYOD-EDUARDO";"Tempo limite esgotado (120000 milissegundos) ao aguardar a conexão do serviço Serviço do Google Update (gupdate)."
+Informação;"2025-03-19 07:46:05";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume Windows (\Device\HarddiskVolumeShadowCopy428) está íntegro. Nenhuma ação é necessária."
+Aviso;"2025-03-19 07:45:46";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:45:44";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:45:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:45:33";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"BYOD-EDUARDO\eddua";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Iniciar para o aplicativo de Servidor COM com CLSID 
+
+Windows.SecurityCenter.WscCloudBackupProvider
+
+ e APPID 
+
+Não Disponível
+
+ ao usuário BYOD-EDUARDO\eddua SID (S-1-5-21-1222459896-856544567-3389853670-1001) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:45:28";"Microsoft-Windows-Kernel-Processor-Power";"0 - (7)";"37";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"A velocidade do processador 7 no grupo 0 está sendo limitada pelo firmware do sistema. O processador está neste estado de desempenho reduzido há 71 segundos desde o último relatório."
+Informação;"2025-03-19 07:45:21";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Serviço de Transferência Inteligente em Segundo Plano foi alterado de iniciar demanda para iniciar automaticamente."
+Informação;"2025-03-19 07:45:01";"Microsoft-Windows-TPM-WMI";"0 - (0)";"1025";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O TPM foi provisionado com êxito e agora está pronto para uso."
+Informação;"2025-03-19 07:44:53";"Microsoft-Windows-TPM-WMI";"0 - (0)";"1282";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O identificador de dispositivo TBS foi gerado."
+Aviso;"2025-03-19 07:44:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:44:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:44:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Aviso;"2025-03-19 07:44:38";"Microsoft-Windows-DistributedCOM";"0 - (0)";"10016";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"As configurações de permissão específico do aplicativo não concedem permissão Local Ativação para o aplicativo de Servidor COM com CLSID 
+
+{6B3B8D23-FA8D-40B9-8DBD-B950333E2C52}
+
+ e APPID 
+
+{4839DDB7-58C2-48F5-8283-E1D1807D0D7D}
+
+ ao usuário AUTORIDADE NT\SERVIÇO LOCAL SID (S-1-5-19) do endereço LocalHost (Usando LRPC) que está sendo executado no contêiner de aplicativos Não Disponível SID (Não Disponível). Essa permissão de segurança pode ser modificada com a ferramenta administrativa Serviços de Componentes."
+Informação;"2025-03-19 07:44:38";"Microsoft-Windows-Ntfs";"0 - (0)";"98";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Volume ?? (\Device\HarddiskVolumeShadowCopy430) está íntegro. Nenhuma ação é necessária."
+Informação;"2025-03-19 07:44:37";"Service Control Manager";"0 - (0)";"7040";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O tipo de inicialização do serviço Instalador de Módulos do Windows foi alterado de iniciar demanda para iniciar automaticamente."
+Informação;"2025-03-19 07:44:36";"Microsoft-Windows-Winlogon";"0 - (1101)";"7001";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Notificação de Logon do Usuário para Programa de Aperfeiçoamento da Experiência do Usuário"
+Informação;"2025-03-19 07:44:33";"TPM";"0 - (0)";"18";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Este evento dispara a execução da verificação de status/provisionamento do TPM (Trusted Platform Module)."
+Informação;"2025-03-19 07:44:33";"Service Control Manager";"0 - (0)";"7026";"N/A";"BYOD-EDUARDO";"O(s) seguinte(s) driver(s) de início do sistema ou de inicialização não foram carregados: 
+
+dam
+
+googledrivefs31357
+
+SentinelDeviceControl
+
+WinSetupMon"
+Informação;"2025-03-19 07:44:31";"Microsoft-Windows-WAS";"0 - (0)";"5211";"N/A";"BYOD-EDUARDO";"O Serviço de Ativação de Processos do Windows (WAS) foi iniciado com o modo 'Classic' usando o 'ConfigurationSystem'"
+Informação;"2025-03-19 07:44:30";"Microsoft-Windows-WLAN-AutoConfig";"0 - (0)";"10001";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Módulo de Extensibilidade de WLAN iniciado com êxito.
+
+
+
+Caminho do Módulo: C:\WINDOWS\system32\IntelIHVRouter04.dll
+
+"
+Informação;"2025-03-19 07:44:30";"IntelHaxm";"Nenhuma - (0)";"4";"N/A";"BYOD-EDUARDO"
+Informação;"2025-03-19 07:44:30";"Microsoft-Windows-WLAN-AutoConfig";"0 - (0)";"4000";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Serviço de Configuração Automática de WLAN iniciado com êxito.
+
+"
+Informação;"2025-03-19 07:44:29";"Microsoft-Windows-DHCPv6-Client";"Service State Event - (4)";"51046";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv6 foi iniciado"
+Informação;"2025-03-19 07:44:29";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50036";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv4 foi iniciado"
+Informação;"2025-03-19 07:44:29";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50103";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"Cliente DHCPv4 registrado para notificação de desligamento"
+Informação;"2025-03-19 07:44:29";"Microsoft-Windows-Dhcp-Client";"Evento do Estado do Serviço - (4)";"50036";"AUTORIDADE NT\SERVIÇO LOCAL";"BYOD-EDUARDO";"O serviço do cliente DHCPv4 foi iniciado"
+Informação;"2025-03-19 07:44:28";"Win32k";"0 - (0)";"267";"N/A";"BYOD-EDUARDO";"Êxito na verificação de Controle de Qualidade de Hardware de Toque/Teclado Sensível ao Toque."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-UserModePowerService";"0 - (10)";"12";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O processo C:\Windows\System32\svchost.exe (ID do processo:1820) redefiniu o esquema de política de {381b4222-f694-41f0-9685-ff5bb260df2e} para {381b4222-f694-41f0-9685-ff5bb260df2e}"
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'bindflt' (10.0, ?2072?-?11?-?08T20:15:04.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'storqosflt' (10.0, ?1990?-?03?-?04T11:18:49.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (10.0, ?1980?-?07?-?08T02:32:35.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"1";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (Versão 10.0, ?1980?-?07?-?08T02:32:35.000000000Z) descarregado com sucesso."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'CldFlt' (10.0, ?1980?-?07?-?08T02:32:35.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'luafv' (10.0, ?1995?-?09?-?15T01:15:24.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Microsoft-Windows-FilterManager";"0 - (0)";"6";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"Filtro do Sistema de Arquivos 'wcifs' (10.0, ?2087?-?12?-?15T06:21:00.000000000Z) carregou e registrou com sucesso o Gerenciador de Filtros."
+Informação;"2025-03-19 07:44:27";"Win32k";"0 - (0)";"267";"N/A";"BYOD-EDUARDO";"Êxito na verificação de Controle de Qualidade de Hardware de Toque/Teclado Sensível ao Toque."
+Informação;"2025-03-19 07:44:25";"Microsoft-Windows-Directory-Services-SAM";"0 - (0)";"16983";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O gerenciador de contas de segurança agora registra eventos resumidos periódicos para clientes remotos que invocam chamadas herdadas do método RPC para alterar ou definir senhas.
+
+
+
+Para mais informações, confira https://go.microsoft.com/fwlink/?linkid=2150956.
+
+"
+Informação;"2025-03-19 07:44:25";"Microsoft-Windows-Directory-Services-SAM";"0 - (0)";"16977";"AUTORIDADE NT\SISTEMA";"BYOD-EDUARDO";"O domínio tem as seguintes configurações de comprimento mínimo para senha.
+
+
+
+MinimumPasswordLength: 0
+
+
+
+RelaxMinimumPasswordLengthLimits: 0
+
+
+
+MinimumPasswordLengthAudit: -1
+
+
+
+Para mais informações, consulte https://go.microsoft.com/fwlink/?LinkId=2097191.
+
+"

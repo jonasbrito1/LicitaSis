@@ -1,0 +1,9 @@
+[2025-06-26 13:41:32] Busca: termo='ar', produto_id=0, limit=8, exato=false
+[2025-06-26 13:41:32] Erro na busca por termo 'ar': SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
+[2025-06-26 13:41:32] Erro PDO: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
+[2025-06-26 13:41:36] Busca: termo='ar', produto_id=0, limit=8, exato=false
+[2025-06-26 13:41:36] Erro na busca por termo 'ar': SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
+[2025-06-26 13:41:36] Erro PDO: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
+[2025-06-26 13:42:29] Busca: termo='be', produto_id=0, limit=8, exato=false
+[2025-06-26 13:42:29] Erro na busca por termo 'be': SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
+[2025-06-26 13:42:29] Erro PDO: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''8'' at line 43
