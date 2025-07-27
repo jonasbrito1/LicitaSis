@@ -23,6 +23,12 @@ $permissionManager = initPermissions($pdo);
 // Verifica se o usuário tem permissão para cadastrar clientes
 $permissionManager->requirePermission('clientes', 'create');
 
+// Tipos de pessoa permitidos
+$tipos_pessoa = [
+    'PJ' => 'Pessoa Jurídica',
+    'PF' => 'Pessoa Física'
+];
+
 // Registra acesso à página
 logUserAction('READ', 'clientes_cadastro');
 
@@ -30,14 +36,37 @@ logUserAction('READ', 'clientes_cadastro');
 $error = "";
 $success = false;
 
-
+// Função para validar CPF
+function validarCPF($cpf) {
+    $cpf = preg_replace('/[^0-9]/', '', $cpf);
+    
+    if (strlen($cpf) != 11 || preg_match('/(\d)\1{10}/', $cpf)) {
+        return false;
+    }
+    
+    for ($t = 9; $t < 11; $t++) {
+        for ($d = 0, $c = 0; $c < $t; $c++) {
+            $d += $cpf[$c] * (($t + 1) - $c);
+        }
+        $d = ((10 * $d) % 11) % 10;
+        if ($cpf[$c] != $d) {
+            return false;
+        }
+    }
+    
+    return true;
+}
 
 // Verifica se o formulário foi enviado
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
         // Obtém os dados do formulário
+        $tipo_pessoa = trim($_POST['tipo_pessoa'] ?? 'PJ');
         $cnpj = trim($_POST['cnpj'] ?? '');
+        $cpf = trim($_POST['cpf'] ?? '');
         $nome_orgaos = trim($_POST['nome_orgaos'] ?? '');
+        $nome_pessoa = trim($_POST['nome_pessoa'] ?? '');
+        $rg = trim($_POST['rg'] ?? '');
         $uasg = trim($_POST['uasg'] ?? '');
         $endereco = trim($_POST['endereco'] ?? '');
         $observacoes = trim($_POST['observacoes'] ?? '');
@@ -45,8 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Verifica se o campo 'uasg' foi preenchido
         if (empty($uasg)) {
             $error = "O campo UASG é obrigatório!";
-        } elseif (empty($nome_orgaos)) {
-            $error = "O campo Nome do Órgão é obrigatório!";
+        } elseif ($tipo_pessoa === 'PJ' && empty($nome_orgaos)) {
+            $error = "O campo Nome do Órgão é obrigatório para Pessoa Jurídica!";
+        } elseif ($tipo_pessoa === 'PF' && empty($nome_pessoa)) {
+            $error = "O campo Nome da Pessoa é obrigatório para Pessoa Física!";
         } else {
             // Concatena múltiplos telefones
             $telefones = '';
@@ -60,34 +91,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $emails = implode(' / ', array_filter(array_map('trim', $_POST['email'])));
             }
 
-            // Valida CNPJ se preenchido
-          if (!empty($cnpj)) {
-    $cnpj_numeros = preg_replace('/[^0-9]/', '', $cnpj);
-    if (strlen($cnpj_numeros) != 14) {
-        $error = "CNPJ deve conter exatamente 14 dígitos!";
-    } else {
-        // Verifica se o CNPJ já existe
-        $stmt_check_cnpj = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE cnpj = :cnpj");
-        $stmt_check_cnpj->bindParam(':cnpj', $cnpj);
-        $stmt_check_cnpj->execute();
-        
-        if ($stmt_check_cnpj->fetchColumn() > 0) {
-            $error = "Este CNPJ já está cadastrado no sistema!";
-        }
-    }
-}
+            // Valida CNPJ ou CPF conforme o tipo de pessoa
+            if ($tipo_pessoa === 'PJ') {
+                if (empty($cnpj)) {
+                    $error = "CNPJ é obrigatório para Pessoa Jurídica!";
+                } else {
+                    $cnpj_numeros = preg_replace('/[^0-9]/', '', $cnpj);
+                    if (strlen($cnpj_numeros) != 14) {
+                        $error = "CNPJ deve conter exatamente 14 dígitos!";
+                    } else {
+                        // Verifica se o CNPJ já existe (excluindo registros onde CNPJ é NULL)
+                        $stmt_check_cnpj = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE cnpj = :cnpj AND cnpj IS NOT NULL");
+                        $stmt_check_cnpj->bindParam(':cnpj', $cnpj);
+                        $stmt_check_cnpj->execute();
+                        
+                        if ($stmt_check_cnpj->fetchColumn() > 0) {
+                            $error = "Este CNPJ já está cadastrado no sistema!";
+                        }
+                    }
+                }
+            } elseif ($tipo_pessoa === 'PF') {
+                if (empty($cpf)) {
+                    $error = "CPF é obrigatório para Pessoa Física!";
+                } else {
+                    $cpf_numeros = preg_replace('/[^0-9]/', '', $cpf);
+                    if (strlen($cpf_numeros) != 11) {
+                        $error = "CPF deve conter exatamente 11 dígitos!";
+                    } elseif (!validarCPF($cpf_numeros)) {
+                        $error = "CPF inválido!";
+                    } else {
+                        // Verifica se o CPF já existe (excluindo registros onde CPF é NULL)
+                        $stmt_check_cpf = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE cpf = :cpf AND cpf IS NOT NULL");
+                        $stmt_check_cpf->bindParam(':cpf', $cpf);
+                        $stmt_check_cpf->execute();
+                        
+                        if ($stmt_check_cpf->fetchColumn() > 0) {
+                            $error = "Este CPF já está cadastrado no sistema!";
+                        }
+                    }
+                }
+            }
 
-            // Verifica se o CNPJ ou a UASG já existe no banco
+            // Verifica se a UASG já existe no banco
             if (empty($error)) {
-                $sql_check_cliente = "SELECT COUNT(*) FROM clientes WHERE (cnpj = :cnpj AND :cnpj != '') OR uasg = :uasg";
-                $stmt_check_cliente = $pdo->prepare($sql_check_cliente);
-                $stmt_check_cliente->bindParam(':cnpj', $cnpj);
-                $stmt_check_cliente->bindParam(':uasg', $uasg);
-                $stmt_check_cliente->execute();
-                $count_cliente = $stmt_check_cliente->fetchColumn();
+                $sql_check_uasg = "SELECT COUNT(*) FROM clientes WHERE uasg = :uasg";
+                $stmt_check_uasg = $pdo->prepare($sql_check_uasg);
+                $stmt_check_uasg->bindParam(':uasg', $uasg);
+                $stmt_check_uasg->execute();
+                $count_uasg = $stmt_check_uasg->fetchColumn();
 
-                if ($count_cliente > 0) {
-                    $error = "CNPJ ou UASG já cadastrados no sistema!";
+                if ($count_uasg > 0) {
+                    $error = "UASG já cadastrada no sistema!";
                 }
             }
         }
@@ -95,29 +149,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Se não houver erro, realiza o cadastro
         if (empty($error)) {
             // Inserir cliente na tabela 'clientes'
-            $sql_cliente = "INSERT INTO clientes (cnpj, nome_orgaos, uasg, endereco, observacoes, telefone, email, created_at) 
-                            VALUES (:cnpj, :nome_orgaos, :uasg, :endereco, :observacoes, :telefone, :email, NOW())";
+            $sql_cliente = "INSERT INTO clientes (tipo_pessoa, cnpj, cpf, nome_orgaos, nome_pessoa, rg, uasg, endereco, observacoes, telefone, email, created_at) 
+                            VALUES (:tipo_pessoa, :cnpj, :cpf, :nome_orgaos, :nome_pessoa, :rg, :uasg, :endereco, :observacoes, :telefone, :email, NOW())";
+            
             $stmt_cliente = $pdo->prepare($sql_cliente);
-            $stmt_cliente->bindParam(':cnpj', $cnpj, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':nome_orgaos', $nome_orgaos, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':uasg', $uasg, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':endereco', $endereco, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':observacoes', $observacoes, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':telefone', $telefones, PDO::PARAM_STR);
-            $stmt_cliente->bindParam(':email', $emails, PDO::PARAM_STR);
+            
+            // Prepare as variáveis para binding - garantindo valores adequados para campos NOT NULL
+            $cnpj_bind = ($tipo_pessoa === 'PJ' && !empty($cnpj)) ? $cnpj : null;
+            $cpf_bind = ($tipo_pessoa === 'PF' && !empty($cpf)) ? $cpf : null;
+            $nome_orgaos_bind = ($tipo_pessoa === 'PJ' && !empty($nome_orgaos)) ? $nome_orgaos : null;
+            $nome_pessoa_bind = ($tipo_pessoa === 'PF' && !empty($nome_pessoa)) ? $nome_pessoa : null;
+            $rg_bind = ($tipo_pessoa === 'PF' && !empty($rg)) ? $rg : null;
+            
+            // Para campos NOT NULL, usa string vazia se estiver vazio
+            $endereco_bind = !empty($endereco) ? $endereco : '';
+            $telefones_bind = !empty($telefones) ? $telefones : '';
+            $emails_bind = !empty($emails) ? $emails : '';
+
+            // Faz o binding usando bindValue
+            $stmt_cliente->bindValue(':tipo_pessoa', $tipo_pessoa, PDO::PARAM_STR);
+            $stmt_cliente->bindValue(':cnpj', $cnpj_bind, $cnpj_bind ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':cpf', $cpf_bind, $cpf_bind ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':nome_orgaos', $nome_orgaos_bind, $nome_orgaos_bind ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':nome_pessoa', $nome_pessoa_bind, $nome_pessoa_bind ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':rg', $rg_bind, $rg_bind ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':uasg', $uasg, PDO::PARAM_STR);
+            $stmt_cliente->bindValue(':endereco', $endereco_bind, PDO::PARAM_STR);
+            $stmt_cliente->bindValue(':observacoes', !empty($observacoes) ? $observacoes : null, !empty($observacoes) ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmt_cliente->bindValue(':telefone', $telefones_bind, PDO::PARAM_STR);
+            $stmt_cliente->bindValue(':email', $emails_bind, PDO::PARAM_STR);
             
             if ($stmt_cliente->execute()) {
                 $cliente_id = $pdo->lastInsertId();
 
-                // Registra auditoria
-                logUserAction('CREATE', 'clientes', $cliente_id, [
-                    'cnpj' => $cnpj,
-                    'nome_orgaos' => $nome_orgaos,
-                    'uasg' => $uasg,
-                    'endereco' => $endereco,
-                    'telefone' => $telefones,
-                    'email' => $emails
-                ]);
+                // Registra auditoria - apenas com dados não nulos
+                $audit_data = [
+                    'tipo_pessoa' => $tipo_pessoa,
+                    'uasg' => $uasg
+                ];
+                
+                if ($cnpj_bind) $audit_data['cnpj'] = $cnpj_bind;
+                if ($cpf_bind) $audit_data['cpf'] = $cpf_bind;
+                if ($nome_orgaos_bind) $audit_data['nome_orgaos'] = $nome_orgaos_bind;
+                if ($nome_pessoa_bind) $audit_data['nome_pessoa'] = $nome_pessoa_bind;
+                if ($rg_bind) $audit_data['rg'] = $rg_bind;
+                if (!empty($endereco)) $audit_data['endereco'] = $endereco;
+                if (!empty($telefones)) $audit_data['telefone'] = $telefones;
+                if (!empty($emails)) $audit_data['email'] = $emails;
+                if (!empty($observacoes)) $audit_data['observacoes'] = $observacoes;
+
+                logUserAction('CREATE', 'clientes', $cliente_id, $audit_data);
 
                 $success = true;
             } else {
@@ -766,57 +847,111 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
         </div>
     <?php endif; ?>
 
-    <form class="form-container" action="cadastrar_clientes.php" method="POST" onsubmit="return validarFormulario()">
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label for="cnpj">
-                    <i class="fas fa-id-card"></i>
-                    CNPJ
-                </label>
-                <div class="input-group">
-                    <input type="text" 
-                           id="cnpj" 
-                           name="cnpj" 
-                           class="form-control" 
-                           placeholder="XX.XXX.XXX/XXXX-XX" 
-                           value="<?php echo isset($_POST['cnpj']) ? htmlspecialchars($_POST['cnpj']) : ''; ?>"
-                           oninput="limitarCNPJ(event)" 
-                           onblur="consultarCNPJ()">
-                    <button type="button" class="action-button" onclick="consultarCNPJ()" title="Consultar CNPJ">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="uasg" class="required">
-                    <i class="fas fa-hashtag"></i>
-                    UASG
-                </label>
-                <input type="text" 
-                       id="uasg" 
-                       name="uasg" 
-                       class="form-control" 
-                       placeholder="Digite o código UASG"
-                       value="<?php echo isset($_POST['uasg']) ? htmlspecialchars($_POST['uasg']) : ''; ?>"
-                       required>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="nome_orgaos" class="required">
-                <i class="fas fa-building"></i>
-                Nome do Órgão
-            </label>
+<form class="form-container" action="cadastrar_clientes.php" method="POST" onsubmit="return validarFormulario()">
+    
+    <div class="form-group">
+        <label for="tipo_pessoa" class="required">
+            <i class="fas fa-user-tag"></i>
+            Tipo de Pessoa
+        </label>
+        <select id="tipo_pessoa" name="tipo_pessoa" class="form-control" onchange="toggleTipoPessoa()" required>
+            <option value="PJ" <?php echo (!isset($_POST['tipo_pessoa']) || $_POST['tipo_pessoa'] === 'PJ') ? 'selected' : ''; ?>>Pessoa Jurídica</option>
+            <option value="PF" <?php echo (isset($_POST['tipo_pessoa']) && $_POST['tipo_pessoa'] === 'PF') ? 'selected' : ''; ?>>Pessoa Física</option>
+        </select>
+    </div>        <div class="form-row">
+    <!-- Campos para Pessoa Jurídica -->
+    <div class="form-group pj-fields">
+        <label for="cnpj" class="required">
+            <i class="fas fa-id-card"></i>
+            CNPJ
+        </label>
+        <div class="input-group">
             <input type="text" 
-                   id="nome_orgaos" 
-                   name="nome_orgaos" 
+                   id="cnpj" 
+                   name="cnpj" 
                    class="form-control" 
-                   placeholder="Nome completo do órgão"
-                   value="<?php echo isset($_POST['nome_orgaos']) ? htmlspecialchars($_POST['nome_orgaos']) : ''; ?>"
-                   required>
+                   placeholder="XX.XXX.XXX/XXXX-XX" 
+                   value="<?php echo isset($_POST['cnpj']) ? htmlspecialchars($_POST['cnpj']) : ''; ?>"
+                   oninput="limitarCNPJ(event)" 
+                   onblur="consultarCNPJ()">
+            <button type="button" class="action-button" onclick="consultarCNPJ()" title="Consultar CNPJ">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
+    </div>
+
+    <!-- Campos para Pessoa Física -->
+    <div class="form-group pf-fields" style="display: none;">
+        <label for="cpf" class="required">
+            <i class="fas fa-id-card"></i>
+            CPF
+        </label>
+        <input type="text" 
+               id="cpf" 
+               name="cpf" 
+               class="form-control" 
+               placeholder="XXX.XXX.XXX-XX" 
+               value="<?php echo isset($_POST['cpf']) ? htmlspecialchars($_POST['cpf']) : ''; ?>"
+               oninput="limitarCPF(event)">
+    </div>
+
+    <div class="form-group">
+        <label for="uasg" class="required">
+            <i class="fas fa-hashtag"></i>
+            UASG
+        </label>
+        <input type="text" 
+               id="uasg" 
+               name="uasg" 
+               class="form-control" 
+               placeholder="Digite o código UASG"
+               value="<?php echo isset($_POST['uasg']) ? htmlspecialchars($_POST['uasg']) : ''; ?>"
+               required>
+    </div>
+</div>
+
+        <div class="form-row">
+    <!-- Campo para Pessoa Jurídica -->
+    <div class="form-group pj-fields">
+        <label for="nome_orgaos" class="required">
+            <i class="fas fa-building"></i>
+            Nome do Órgão
+        </label>
+        <input type="text" 
+               id="nome_orgaos" 
+               name="nome_orgaos" 
+               class="form-control" 
+               placeholder="Nome completo do órgão"
+               value="<?php echo isset($_POST['nome_orgaos']) ? htmlspecialchars($_POST['nome_orgaos']) : ''; ?>">
+    </div>
+
+    <!-- Campos para Pessoa Física -->
+    <div class="form-group pf-fields" style="display: none;">
+        <label for="nome_pessoa" class="required">
+            <i class="fas fa-user"></i>
+            Nome da Pessoa
+        </label>
+        <input type="text" 
+               id="nome_pessoa" 
+               name="nome_pessoa" 
+               class="form-control" 
+               placeholder="Nome completo da pessoa"
+               value="<?php echo isset($_POST['nome_pessoa']) ? htmlspecialchars($_POST['nome_pessoa']) : ''; ?>">
+    </div>
+
+    <div class="form-group pf-fields" style="display: none;">
+        <label for="rg">
+            <i class="fas fa-address-card"></i>
+            RG
+        </label>
+        <input type="text" 
+               id="rg" 
+               name="rg" 
+               class="form-control" 
+               placeholder="XX.XXX.XXX-X"
+               value="<?php echo isset($_POST['rg']) ? htmlspecialchars($_POST['rg']) : ''; ?>">
+    </div>
+</div>
 
         <div class="form-group">
             <label for="endereco">
@@ -925,6 +1060,7 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
 <script>
     let telefoneCount = 1;
     let emailCount = 1;
+
 
     // Função para adicionar campo de telefone dinamicamente
     function addTelefoneField() {
@@ -1303,14 +1439,30 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
     }
 
     // Função para validar o formulário
-    function validarFormulario() {
-        const uasg = document.getElementById("uasg").value.trim();
+function validarFormulario() {
+    const tipoPessoa = document.getElementById("tipo_pessoa").value;
+    const uasg = document.getElementById("uasg").value.trim();
+    
+    // Verifica campos obrigatórios
+    if (!uasg) {
+        showToast('O campo UASG é obrigatório!', 'error');
+        document.getElementById("uasg").focus();
+        return false;
+    }
+    
+    if (tipoPessoa === 'PJ') {
+        const cnpj = document.getElementById("cnpj").value.replace(/[^\d]/g, '');
         const nomeOrgao = document.getElementById("nome_orgaos").value.trim();
         
-        // Verifica campos obrigatórios
-        if (!uasg) {
-            showToast('O campo UASG é obrigatório!', 'error');
-            document.getElementById("uasg").focus();
+        if (!cnpj) {
+            showToast('O campo CNPJ é obrigatório para Pessoa Jurídica!', 'error');
+            document.getElementById("cnpj").focus();
+            return false;
+        }
+        
+        if (cnpj.length !== 14) {
+            showToast('CNPJ deve ter 14 dígitos!', 'error');
+            document.getElementById("cnpj").focus();
             return false;
         }
         
@@ -1319,32 +1471,52 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
             document.getElementById("nome_orgaos").focus();
             return false;
         }
+    } else {
+        const cpf = document.getElementById("cpf").value.replace(/[^\d]/g, '');
+        const nomePessoa = document.getElementById("nome_pessoa").value.trim();
         
-        // Validação adicional do CNPJ se preenchido
-        const cnpj = document.getElementById("cnpj").value.replace(/[^\d]/g, '');
-        if (cnpj && cnpj.length !== 14) {
-            showToast('CNPJ deve ter 14 dígitos!', 'error');
-            document.getElementById("cnpj").focus();
+        if (!cpf) {
+            showToast('O campo CPF é obrigatório para Pessoa Física!', 'error');
+            document.getElementById("cpf").focus();
             return false;
         }
         
-        // Validação de e-mails
-        const emails = document.querySelectorAll('input[name="email[]"]');
-        for (let email of emails) {
-            if (email.value && !isValidEmail(email.value)) {
-                showToast('Digite um e-mail válido!', 'error');
-                email.focus();
-                return false;
-            }
+        if (cpf.length !== 11) {
+            showToast('CPF deve ter 11 dígitos!', 'error');
+            document.getElementById("cpf").focus();
+            return false;
         }
         
-        // Mostra loading no botão de submit
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+        if (!validarCPF(cpf)) {
+            showToast('CPF inválido!', 'error');
+            document.getElementById("cpf").focus();
+            return false;
+        }
         
-        return true;
+        if (!nomePessoa) {
+            showToast('O campo Nome da Pessoa é obrigatório!', 'error');
+            document.getElementById("nome_pessoa").focus();
+            return false;
+        }
     }
+    
+    // Validação de e-mails
+    const emails = document.querySelectorAll('input[name="email[]"]');
+    for (let email of emails) {
+        if (email.value && !isValidEmail(email.value)) {
+            showToast('Digite um e-mail válido!', 'error');
+            email.focus();
+            return false;
+        }
+    }
+    
+    // Mostra loading no botão de submit
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+    
+    return true;
+}
 
     // Função para validar e-mail
     function isValidEmail(email) {
@@ -1384,6 +1556,9 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
     document.addEventListener('DOMContentLoaded', function() {
         // Aplica formatação de telefone
         applyTelefoneFormatting();
+
+        toggleTipoPessoa();
+
         
         // Foca no primeiro campo
         document.getElementById('cnpj').focus();
@@ -1455,6 +1630,90 @@ renderHeader("Cadastro de Cliente - LicitaSis", "clientes");
             }
         }
     });
+
+    // Função para alternar entre PF e PJ
+function toggleTipoPessoa() {
+    const tipoPessoa = document.getElementById('tipo_pessoa').value;
+    const pjFields = document.querySelectorAll('.pj-fields');
+    const pfFields = document.querySelectorAll('.pf-fields');
+    
+    if (tipoPessoa === 'PJ') {
+        pjFields.forEach(field => {
+            field.style.display = 'block';
+            const inputs = field.querySelectorAll('input');
+            inputs.forEach(input => input.required = input.dataset.required !== 'false');
+        });
+        pfFields.forEach(field => {
+            field.style.display = 'none';
+            const inputs = field.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.required = false;
+                input.value = '';
+            });
+        });
+    } else {
+        pjFields.forEach(field => {
+            field.style.display = 'none';
+            const inputs = field.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.required = false;
+                input.value = '';
+            });
+        });
+        pfFields.forEach(field => {
+            field.style.display = 'block';
+            const inputs = field.querySelectorAll('input');
+            inputs.forEach(input => input.required = input.dataset.required !== 'false');
+        });
+    }
+}
+
+// Função para limitar e formatar CPF
+function limitarCPF(event) {
+    let cpf = event.target.value.replace(/\D/g, '');
+    
+    if (cpf.length > 11) {
+        cpf = cpf.substring(0, 11);
+    }
+    
+    // Formata o CPF (XXX.XXX.XXX-XX)
+    if (cpf.length > 9) {
+        cpf = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+    } else if (cpf.length > 6) {
+        cpf = cpf.replace(/^(\d{3})(\d{3})(\d{0,3})/, "$1.$2.$3");
+    } else if (cpf.length > 3) {
+        cpf = cpf.replace(/^(\d{3})(\d{0,3})/, "$1.$2");
+    }
+    
+    event.target.value = cpf;
+}
+
+// Função para validar CPF
+function validarCPF(cpf) {
+    cpf = cpf.replace(/[^\d]/g, '');
+    
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
+        return false;
+    }
+    
+    let soma = 0;
+    for (let i = 0; i < 9; i++) {
+        soma += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let resto = 11 - (soma % 11);
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(9))) return false;
+    
+    soma = 0;
+    for (let i = 0; i < 10; i++) {
+        soma += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    resto = 11 - (soma % 11);
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(10))) return false;
+    
+    return true;
+}
 
     // Auto-save no localStorage (dados temporários)
     function autoSave() {

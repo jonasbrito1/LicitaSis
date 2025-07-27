@@ -94,10 +94,39 @@ function getCategoriaJoinConfig($pdo) {
 }
 
 // Inicializa variáveis
+// PARÂMETROS DE FILTRO E ORDENAÇÃO
+$filtro_nome = $_GET['filtro_nome'] ?? '';
+$filtro_codigo = $_GET['filtro_codigo'] ?? '';
+$filtro_categoria = $_GET['filtro_categoria'] ?? '';
+$filtro_fornecedor = $_GET['filtro_fornecedor'] ?? '';
+$filtro_estoque = $_GET['filtro_estoque'] ?? '';
+$filtro_preco_min = $_GET['filtro_preco_min'] ?? '';
+$filtro_preco_max = $_GET['filtro_preco_max'] ?? '';
+
+// PARÂMETROS DE ORDENAÇÃO
+$ordem_campo = $_GET['ordem_campo'] ?? 'nome';
+$ordem_direcao = $_GET['ordem_direcao'] ?? 'ASC';
+
+// VALIDAÇÃO DOS PARÂMETROS DE ORDENAÇÃO
+$campos_ordenacao_validos = [
+    'nome' => 'p.nome',
+    'codigo' => 'p.codigo', 
+    'preco_unitario' => 'p.preco_unitario',
+    'preco_venda' => 'p.preco_venda',
+    'estoque_atual' => 'p.estoque_atual',
+    'created_at' => 'p.created_at',
+    'categoria' => 'c.nome',
+    'fornecedor' => 'f.nome'
+];
+
+$campo_ordenacao = $campos_ordenacao_validos[$ordem_campo] ?? 'p.nome';
+$direcao_ordenacao = strtoupper($ordem_direcao) === 'DESC' ? 'DESC' : 'ASC';
+
+// Inicializa variáveis
 $error = "";
 $success = "";
 $produtos = [];
-$searchTerm = "";
+$searchTerm = $_GET['search'] ?? '';
 $totalProdutos = 0;
 $produtosPorPagina = 20;
 $paginaAtual = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -468,71 +497,104 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_product'])) {
 }
 
 // Processa busca e paginação - VERSÃO CORRIGIDA
+// Processa busca, filtros e paginação - VERSÃO COM FILTROS
 try {
     // Obtém configuração da categoria
     $categoriaConfig = getCategoriaJoinConfig($pdo);
     $categoriaJoin = $categoriaConfig['join'];
     $categoriaSelect = $categoriaConfig['select'];
 
-    if (isset($_GET['search']) && !empty(trim($_GET['search']))) {
-        $searchTerm = trim($_GET['search']);
-        
-        // CONSULTA DE CONTAGEM CORRIGIDA
-        $countSql = "SELECT COUNT(*) as total FROM produtos p
-                     LEFT JOIN fornecedores f ON p.fornecedor = f.id
-                     $categoriaJoin
-                     WHERE p.nome LIKE :searchTerm 
-                     OR p.codigo LIKE :searchTerm 
-                     OR COALESCE(c.nome, p.categoria, '') LIKE :searchTerm
-                     OR f.nome LIKE :searchTerm";
-        $countStmt = $pdo->prepare($countSql);
-        $searchParam = "%$searchTerm%";
-        $countStmt->bindParam(':searchTerm', $searchParam);
-        $countStmt->execute();
-        $totalProdutos = $countStmt->fetch()['total'];
-        
-        // CONSULTA PRINCIPAL CORRIGIDA
-        $sql = "SELECT p.*, 
-                       f.nome as fornecedor_nome, 
-                       $categoriaSelect,
-                       COALESCE(c.nome, p.categoria, 'Sem categoria') as categoria_display,
-                       COALESCE(p.preco_venda, p.preco_unitario) as preco_exibicao 
-                FROM produtos p
-                LEFT JOIN fornecedores f ON p.fornecedor = f.id
-                $categoriaJoin
-                WHERE p.nome LIKE :searchTerm 
-                OR p.codigo LIKE :searchTerm 
-                OR COALESCE(c.nome, p.categoria, '') LIKE :searchTerm
-                OR f.nome LIKE :searchTerm
-                ORDER BY p.nome ASC 
-                LIMIT :limit OFFSET :offset";
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':searchTerm', $searchParam);
-        $stmt->bindParam(':limit', $produtosPorPagina, PDO::PARAM_INT);
-        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        // CONSULTA SEM BUSCA
-        $countStmt = $pdo->query("SELECT COUNT(*) as total FROM produtos");
-        $totalProdutos = $countStmt->fetch()['total'];
-        
-        $sql = "SELECT p.*, 
-                       f.nome as fornecedor_nome, 
-                       $categoriaSelect,
-                       COALESCE(c.nome, p.categoria, 'Sem categoria') as categoria_display,
-                       COALESCE(p.preco_venda, p.preco_unitario) as preco_exibicao 
-                FROM produtos p
-                LEFT JOIN fornecedores f ON p.fornecedor = f.id
-                $categoriaJoin
-                ORDER BY p.nome ASC 
-                LIMIT :limit OFFSET :offset";
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':limit', $produtosPorPagina, PDO::PARAM_INT);
-        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // CONSTRUÇÃO DA QUERY COM FILTROS
+    $where_conditions = [];
+    $params = [];
+
+    // Filtro por busca geral
+    if (!empty($searchTerm)) {
+        $where_conditions[] = "(p.nome LIKE :searchTerm OR p.codigo LIKE :searchTerm OR COALESCE(c.nome, p.categoria, '') LIKE :searchTerm OR f.nome LIKE :searchTerm)";
+        $params[':searchTerm'] = "%{$searchTerm}%";
     }
+
+    // Filtros específicos
+    if (!empty($filtro_nome)) {
+        $where_conditions[] = "p.nome LIKE :filtro_nome";
+        $params[':filtro_nome'] = "%{$filtro_nome}%";
+    }
+
+    if (!empty($filtro_codigo)) {
+        $where_conditions[] = "p.codigo LIKE :filtro_codigo";
+        $params[':filtro_codigo'] = "%{$filtro_codigo}%";
+    }
+
+    if (!empty($filtro_categoria)) {
+        $where_conditions[] = "p.categoria_id = :filtro_categoria";
+        $params[':filtro_categoria'] = $filtro_categoria;
+    }
+
+    if (!empty($filtro_fornecedor)) {
+        $where_conditions[] = "p.fornecedor = :filtro_fornecedor";
+        $params[':filtro_fornecedor'] = $filtro_fornecedor;
+    }
+
+    if (!empty($filtro_estoque)) {
+        switch ($filtro_estoque) {
+            case 'baixo':
+                $where_conditions[] = "p.controla_estoque = 1 AND p.estoque_atual <= p.estoque_minimo";
+                break;
+            case 'zerado':
+                $where_conditions[] = "p.controla_estoque = 1 AND p.estoque_atual = 0";
+                break;
+            case 'disponivel':
+                $where_conditions[] = "p.controla_estoque = 1 AND p.estoque_atual > p.estoque_minimo";
+                break;
+            case 'nao_controla':
+                $where_conditions[] = "p.controla_estoque = 0";
+                break;
+        }
+    }
+
+    if (!empty($filtro_preco_min)) {
+        $where_conditions[] = "p.preco_unitario >= :filtro_preco_min";
+        $params[':filtro_preco_min'] = floatval($filtro_preco_min);
+    }
+
+    if (!empty($filtro_preco_max)) {
+        $where_conditions[] = "p.preco_unitario <= :filtro_preco_max";
+        $params[':filtro_preco_max'] = floatval($filtro_preco_max);
+    }
+
+    $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+
+    // CONSULTA DE CONTAGEM
+    $countSql = "SELECT COUNT(*) as total FROM produtos p
+                 LEFT JOIN fornecedores f ON p.fornecedor = f.id
+                 $categoriaJoin
+                 $where_clause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $totalProdutos = $countStmt->fetch()['total'];
+
+    // CONSULTA PRINCIPAL COM ORDENAÇÃO
+    $sql = "SELECT p.*, 
+                   f.nome as fornecedor_nome, 
+                   $categoriaSelect,
+                   COALESCE(c.nome, p.categoria, 'Sem categoria') as categoria_display,
+                   COALESCE(p.preco_venda, p.preco_unitario) as preco_exibicao 
+            FROM produtos p
+            LEFT JOIN fornecedores f ON p.fornecedor = f.id
+            $categoriaJoin
+            $where_clause
+            ORDER BY $campo_ordenacao $direcao_ordenacao 
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindParam(':limit', $produtosPorPagina, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (PDOException $e) {
     $error = "Erro ao buscar produtos: " . $e->getMessage();
     error_log("Erro na consulta de produtos: " . $e->getMessage());
@@ -2057,6 +2119,104 @@ body {
         margin: 0.5rem auto;
     }
 }
+/* Estilos para filtros */
+.filters-container {
+    margin-bottom: 2rem;
+    animation: slideDown 0.3s ease;
+}
+
+.filters-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--info-color);
+}
+
+.filters-card h4 {
+    color: var(--info-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.filter-group label i {
+    color: var(--info-color);
+    width: 16px;
+}
+
+.filters-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Estilos para headers ordenáveis */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: var(--transition);
+}
+
+.sortable-header:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-1px);
+}
+
+.sort-indicator {
+    margin-left: 0.5rem;
+    opacity: 0.6;
+    font-size: 0.8rem;
+}
+
+.sortable-header:hover .sort-indicator {
+    opacity: 1;
+}
+
+/* Responsividade para filtros */
+@media (max-width: 768px) {
+    .filters-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .filters-buttons {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
     </style>
 </head>
 <body>
@@ -2086,30 +2246,172 @@ body {
         <?php endif; ?>
 
         <!-- Barra de controles -->
-        <div class="controls-bar">
-            <form class="search-form" action="consulta_produto.php" method="GET">
-                <input type="text" 
-                       name="search" 
-                       class="search-input"
-                       placeholder="Pesquisar por Código, Nome, Categoria ou Fornecedor..." 
-                       value="<?php echo htmlspecialchars($searchTerm); ?>"
-                       autocomplete="off">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Pesquisar
-                </button>
-                <?php if ($searchTerm): ?>
-                    <a href="consulta_produto.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Limpar
-                    </a>
-                <?php endif; ?>
-            </form>
-            
-            <?php if ($canCreate): ?>
-                <a href="cadastro_produto.php" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Novo Produto
-                </a>
+      <!-- Barra de controles -->
+<div class="controls-bar">
+    <!-- Busca Geral -->
+    <form class="search-form" action="consulta_produto.php" method="GET" id="searchForm">
+        <input type="text" 
+               name="search" 
+               class="search-input"
+               placeholder="Busca geral por Código, Nome, Categoria ou Fornecedor..." 
+               value="<?php echo htmlspecialchars($searchTerm); ?>"
+               autocomplete="off">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search"></i> Buscar
+        </button>
+        <button type="button" class="btn btn-info" onclick="toggleFilters()">
+            <i class="fas fa-filter"></i> Filtros
+        </button>
+        <?php if ($searchTerm || $filtro_nome || $filtro_codigo || $filtro_categoria || $filtro_fornecedor || $filtro_estoque || $filtro_preco_min || $filtro_preco_max): ?>
+            <a href="consulta_produto.php" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Limpar
+            </a>
+        <?php endif; ?>
+        
+        <!-- Preserve filter parameters -->
+        <?php foreach (['filtro_nome', 'filtro_codigo', 'filtro_categoria', 'filtro_fornecedor', 'filtro_estoque', 'filtro_preco_min', 'filtro_preco_max', 'ordem_campo', 'ordem_direcao'] as $param): ?>
+            <?php if (!empty($_GET[$param])): ?>
+                <input type="hidden" name="<?php echo $param; ?>" value="<?php echo htmlspecialchars($_GET[$param]); ?>">
             <?php endif; ?>
-        </div>
+        <?php endforeach; ?>
+    </form>
+    
+    <?php if ($canCreate): ?>
+        <a href="cadastro_produto.php" class="btn btn-success">
+            <i class="fas fa-plus"></i> Novo Produto
+        </a>
+    <?php endif; ?>
+</div>
+
+<!-- Filtros Avançados -->
+<div class="filters-container" id="filtersContainer" style="display: none;">
+    <div class="filters-card">
+        <h4><i class="fas fa-filter"></i> Filtros Avançados</h4>
+        <form action="consulta_produto.php" method="GET" id="filtersForm">
+            <!-- Preserve search parameter -->
+            <?php if ($searchTerm): ?>
+                <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>">
+            <?php endif; ?>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="filtro_nome"><i class="fas fa-tag"></i> Nome do Produto</label>
+                    <input type="text" name="filtro_nome" id="filtro_nome" 
+                           class="form-control" placeholder="Nome do produto..."
+                           value="<?php echo htmlspecialchars($filtro_nome); ?>">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_codigo"><i class="fas fa-barcode"></i> Código</label>
+                    <input type="text" name="filtro_codigo" id="filtro_codigo" 
+                           class="form-control" placeholder="Código do produto..."
+                           value="<?php echo htmlspecialchars($filtro_codigo); ?>">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_categoria"><i class="fas fa-tags"></i> Categoria</label>
+                    <select name="filtro_categoria" id="filtro_categoria" class="form-control">
+                        <option value="">Todas as categorias</option>
+                        <?php
+                        try {
+                            $stmt = $pdo->query("SELECT id, nome FROM categorias WHERE status = 'ativo' ORDER BY nome ASC");
+                            $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            
+                            foreach ($categorias as $categoria) {
+                                $selected = ($filtro_categoria == $categoria['id']) ? 'selected' : '';
+                                echo "<option value='" . $categoria['id'] . "' " . $selected . ">" . 
+                                     htmlspecialchars($categoria['nome']) . "</option>";
+                            }
+                        } catch (PDOException $e) {
+                            error_log("Erro ao buscar categorias para filtro: " . $e->getMessage());
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_fornecedor"><i class="fas fa-truck"></i> Fornecedor</label>
+                    <select name="filtro_fornecedor" id="filtro_fornecedor" class="form-control">
+                        <option value="">Todos os fornecedores</option>
+                        <?php
+                        try {
+                            $stmt = $pdo->query("SELECT id, nome FROM fornecedores ORDER BY nome ASC");
+                            $fornecedores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            
+                            foreach ($fornecedores as $fornecedor) {
+                                $selected = ($filtro_fornecedor == $fornecedor['id']) ? 'selected' : '';
+                                echo "<option value='" . $fornecedor['id'] . "' " . $selected . ">" . 
+                                     htmlspecialchars($fornecedor['nome']) . "</option>";
+                            }
+                        } catch (PDOException $e) {
+                            error_log("Erro ao buscar fornecedores para filtro: " . $e->getMessage());
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_estoque"><i class="fas fa-warehouse"></i> Situação do Estoque</label>
+                    <select name="filtro_estoque" id="filtro_estoque" class="form-control">
+                        <option value="">Todos os produtos</option>
+                        <option value="baixo" <?php echo ($filtro_estoque == 'baixo') ? 'selected' : ''; ?>>Estoque baixo</option>
+                        <option value="zerado" <?php echo ($filtro_estoque == 'zerado') ? 'selected' : ''; ?>>Estoque zerado</option>
+                        <option value="disponivel" <?php echo ($filtro_estoque == 'disponivel') ? 'selected' : ''; ?>>Estoque disponível</option>
+                        <option value="nao_controla" <?php echo ($filtro_estoque == 'nao_controla') ? 'selected' : ''; ?>>Não controla estoque</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_preco_min"><i class="fas fa-dollar-sign"></i> Preço Mínimo</label>
+                    <input type="number" name="filtro_preco_min" id="filtro_preco_min" 
+                           class="form-control" step="0.01" min="0" placeholder="0.00"
+                           value="<?php echo htmlspecialchars($filtro_preco_min); ?>">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filtro_preco_max"><i class="fas fa-dollar-sign"></i> Preço Máximo</label>
+                    <input type="number" name="filtro_preco_max" id="filtro_preco_max" 
+                           class="form-control" step="0.01" min="0" placeholder="0.00"
+                           value="<?php echo htmlspecialchars($filtro_preco_max); ?>">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="ordem_campo"><i class="fas fa-sort"></i> Ordenar por</label>
+                    <select name="ordem_campo" id="ordem_campo" class="form-control">
+                        <option value="nome" <?php echo ($ordem_campo == 'nome') ? 'selected' : ''; ?>>Nome</option>
+                        <option value="codigo" <?php echo ($ordem_campo == 'codigo') ? 'selected' : ''; ?>>Código</option>
+                        <option value="preco_unitario" <?php echo ($ordem_campo == 'preco_unitario') ? 'selected' : ''; ?>>Preço Unitário</option>
+                        <option value="preco_venda" <?php echo ($ordem_campo == 'preco_venda') ? 'selected' : ''; ?>>Preço de Venda</option>
+                        <option value="estoque_atual" <?php echo ($ordem_campo == 'estoque_atual') ? 'selected' : ''; ?>>Estoque</option>
+                        <option value="created_at" <?php echo ($ordem_campo == 'created_at') ? 'selected' : ''; ?>>Data de Cadastro</option>
+                        <option value="categoria" <?php echo ($ordem_campo == 'categoria') ? 'selected' : ''; ?>>Categoria</option>
+                        <option value="fornecedor" <?php echo ($ordem_campo == 'fornecedor') ? 'selected' : ''; ?>>Fornecedor</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="ordem_direcao"><i class="fas fa-sort-amount-down"></i> Direção</label>
+                    <select name="ordem_direcao" id="ordem_direcao" class="form-control">
+                        <option value="ASC" <?php echo ($ordem_direcao == 'ASC') ? 'selected' : ''; ?>>Crescente (A-Z, 0-9)</option>
+                        <option value="DESC" <?php echo ($ordem_direcao == 'DESC') ? 'selected' : ''; ?>>Decrescente (Z-A, 9-0)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filters-buttons">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Aplicar Filtros
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-eraser"></i> Limpar Filtros
+                </button>
+                <button type="button" class="btn btn-info" onclick="toggleFilters()">
+                    <i class="fas fa-eye-slash"></i> Ocultar Filtros
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
         <!-- Informações de resultados -->
         <?php if ($totalProdutos > 0): ?>
@@ -2142,14 +2444,42 @@ body {
                 <div class="table-responsive">
                     <table>
                         <thead>
-                            <tr>
-                                <th><i class="fas fa-barcode"></i> Código</th>
-                                <th><i class="fas fa-tag"></i> Nome</th>
-                                <th><i class="fas fa-tags"></i> Categoria</th>
-                                <th><i class="fas fa-dollar-sign"></i> Preço de Venda</th>
-                                <th><i class="fas fa-cogs"></i> Ações</th>
-                            </tr>
-                        </thead>
+    <tr>
+        <th class="sortable-header" onclick="changeOrder('codigo')">
+            <i class="fas fa-barcode"></i> Código
+            <?php if ($ordem_campo == 'codigo'): ?>
+                <i class="fas fa-sort-<?php echo $ordem_direcao == 'ASC' ? 'up' : 'down'; ?> sort-indicator"></i>
+            <?php else: ?>
+                <i class="fas fa-sort sort-indicator"></i>
+            <?php endif; ?>
+        </th>
+        <th class="sortable-header" onclick="changeOrder('nome')">
+            <i class="fas fa-tag"></i> Nome
+            <?php if ($ordem_campo == 'nome'): ?>
+                <i class="fas fa-sort-<?php echo $ordem_direcao == 'ASC' ? 'up' : 'down'; ?> sort-indicator"></i>
+            <?php else: ?>
+                <i class="fas fa-sort sort-indicator"></i>
+            <?php endif; ?>
+        </th>
+        <th class="sortable-header" onclick="changeOrder('categoria')">
+            <i class="fas fa-tags"></i> Categoria
+            <?php if ($ordem_campo == 'categoria'): ?>
+                <i class="fas fa-sort-<?php echo $ordem_direcao == 'ASC' ? 'up' : 'down'; ?> sort-indicator"></i>
+            <?php else: ?>
+                <i class="fas fa-sort sort-indicator"></i>
+            <?php endif; ?>
+        </th>
+        <th class="sortable-header" onclick="changeOrder('preco_venda')">
+            <i class="fas fa-dollar-sign"></i> Preço de Venda
+            <?php if ($ordem_campo == 'preco_venda'): ?>
+                <i class="fas fa-sort-<?php echo $ordem_direcao == 'ASC' ? 'up' : 'down'; ?> sort-indicator"></i>
+            <?php else: ?>
+                <i class="fas fa-sort sort-indicator"></i>
+            <?php endif; ?>
+        </th>
+        <th><i class="fas fa-cogs"></i> Ações</th>
+    </tr>
+</thead>
                         <tbody>
                             <?php foreach ($produtos as $produto): ?>
                                 <tr>
@@ -3095,6 +3425,109 @@ document.addEventListener('DOMContentLoaded', function() {
     window.debugTabelaProdutos = debugTabelaProdutos;
     
     console.log('Event listeners configurados!');
+});
+
+// Funções para filtros e ordenação
+function toggleFilters() {
+    const container = document.getElementById('filtersContainer');
+    const isHidden = container.style.display === 'none';
+    
+    if (isHidden) {
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+function clearFilters() {
+    // Limpa todos os campos de filtro
+    document.getElementById('filtro_nome').value = '';
+    document.getElementById('filtro_codigo').value = '';
+    document.getElementById('filtro_categoria').value = '';
+    document.getElementById('filtro_fornecedor').value = '';
+    document.getElementById('filtro_estoque').value = '';
+    document.getElementById('filtro_preco_min').value = '';
+    document.getElementById('filtro_preco_max').value = '';
+    
+    // Redireciona para a página sem filtros
+    window.location.href = 'consulta_produto.php';
+}
+
+function changeOrder(campo) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentCampo = urlParams.get('ordem_campo') || 'nome';
+    const currentDirecao = urlParams.get('ordem_direcao') || 'ASC';
+    
+    // Se já está ordenando por este campo, inverte a direção
+    if (currentCampo === campo) {
+        urlParams.set('ordem_direcao', currentDirecao === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+        // Se é um novo campo, usa ASC como padrão
+        urlParams.set('ordem_campo', campo);
+        urlParams.set('ordem_direcao', 'ASC');
+    }
+    
+    // Remove a página para voltar à primeira
+    urlParams.delete('page');
+    
+    // Redireciona com os novos parâmetros
+    window.location.href = 'consulta_produto.php?' + urlParams.toString();
+}
+
+// Event listeners para filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit do formulário de filtros quando há mudança
+    const filterInputs = document.querySelectorAll('#filtersForm input, #filtersForm select');
+    filterInputs.forEach(input => {
+        if (input.type === 'text' || input.type === 'number') {
+            // Para campos de texto, aguarda o usuário parar de digitar
+            let timeout;
+            input.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    if (this.value.length === 0 || this.value.length >= 2) {
+                        // Auto-submit após 500ms de inatividade
+                        // document.getElementById('filtersForm').submit();
+                    }
+                }, 500);
+            });
+        }
+    });
+    
+    // Mostra filtros se houver filtros ativos
+    const hasFilters = <?php echo json_encode(!empty($filtro_nome) || !empty($filtro_codigo) || !empty($filtro_categoria) || !empty($filtro_fornecedor) || !empty($filtro_estoque) || !empty($filtro_preco_min) || !empty($filtro_preco_max)); ?>;
+    if (hasFilters) {
+        document.getElementById('filtersContainer').style.display = 'block';
+    }
+    
+    // Adiciona indicadores visuais para campos com filtros ativos
+    const activeFilters = {
+        'filtro_nome': <?php echo json_encode($filtro_nome); ?>,
+        'filtro_codigo': <?php echo json_encode($filtro_codigo); ?>,
+        'filtro_categoria': <?php echo json_encode($filtro_categoria); ?>,
+        'filtro_fornecedor': <?php echo json_encode($filtro_fornecedor); ?>,
+        'filtro_estoque': <?php echo json_encode($filtro_estoque); ?>,
+        'filtro_preco_min': <?php echo json_encode($filtro_preco_min); ?>,
+        'filtro_preco_max': <?php echo json_encode($filtro_preco_max); ?>
+    };
+    
+    Object.keys(activeFilters).forEach(filterId => {
+        if (activeFilters[filterId]) {
+            const element = document.getElementById(filterId);
+            if (element) {
+                element.style.borderColor = 'var(--success-color)';
+                element.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+            }
+        }
+    });
+});
+
+// Adiciona às funções globais
+Object.assign(window.SistemaLicitacoes, {
+    toggleFilters,
+    clearFilters,
+    changeOrder
 });
 
 // Expõe funções principais para uso global

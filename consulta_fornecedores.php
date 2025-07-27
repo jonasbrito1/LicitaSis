@@ -257,29 +257,105 @@ if (isset($_POST['delete_fornecedor_id'])) {
 // ===========================================
 // CONSULTA PRINCIPAL COM FILTROS E PAGINAÇÃO
 // ===========================================
-$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
-$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : '';
+// CONFIGURAÇÃO DE FILTROS E ORDENAÇÃO AVANÇADA
+$itensPorPagina = isset($_GET['items_per_page']) ? max(10, min(100, intval($_GET['items_per_page']))) : 20;
+$paginaAtual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
+$offset = ($paginaAtual - 1) * $itensPorPagina;
 
+// Parâmetros de filtro
+$filtros = [
+    'search' => isset($_GET['search']) ? trim($_GET['search']) : '',
+    'nome' => isset($_GET['nome']) ? trim($_GET['nome']) : '',
+    'cnpj' => isset($_GET['cnpj']) ? trim($_GET['cnpj']) : '',
+    'email' => isset($_GET['email']) ? trim($_GET['email']) : '',
+    'telefone' => isset($_GET['telefone']) ? trim($_GET['telefone']) : '',
+    'status' => isset($_GET['status']) ? trim($_GET['status']) : '',
+    'data_inicio' => isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '',
+    'data_fim' => isset($_GET['data_fim']) ? trim($_GET['data_fim']) : ''
+];
+
+// Parâmetros de ordenação
+$sortBy = isset($_GET['sort']) ? trim($_GET['sort']) : 'nome';
+$sortOrder = isset($_GET['order']) && strtolower($_GET['order']) === 'desc' ? 'DESC' : 'ASC';
+
+// Campos válidos para ordenação
+$validSortFields = [
+    'nome' => 'f.nome',
+    'cnpj' => 'f.cnpj',
+    'email' => 'f.email',
+    'telefone' => 'f.telefone',
+    'endereco' => 'f.endereco',
+    'created_at' => 'f.created_at',
+    'codigo' => 'f.codigo',
+    'status' => 'status_order'
+];
+
+// Validação do campo de ordenação
+if (!array_key_exists($sortBy, $validSortFields)) {
+    $sortBy = 'nome';
+}
 try {
     // Parâmetros para consulta
     $params = [];
     $whereConditions = [];
     
     // Condições de filtro
-    if (!empty($searchTerm)) {
-        $whereConditions[] = "(f.codigo LIKE :searchTerm OR f.cnpj LIKE :searchTerm OR f.nome LIKE :searchTerm OR f.email LIKE :searchTerm)";
-        $params[':searchTerm'] = "%$searchTerm%";
+    // CONSULTA COM FILTROS AVANÇADOS E ORDENAÇÃO
+$params = [];
+$whereConditions = [];
+
+// Construção das condições de filtro
+if (!empty($filtros['search'])) {
+    $whereConditions[] = "(f.codigo LIKE :search OR f.cnpj LIKE :search OR f.nome LIKE :search OR f.email LIKE :search OR f.telefone LIKE :search OR f.endereco LIKE :search)";
+    $params[':search'] = "%{$filtros['search']}%";
+}
+
+if (!empty($filtros['nome'])) {
+    $whereConditions[] = "f.nome LIKE :nome";
+    $params[':nome'] = "%{$filtros['nome']}%";
+}
+
+if (!empty($filtros['cnpj'])) {
+    $whereConditions[] = "f.cnpj LIKE :cnpj";
+    $params[':cnpj'] = "%{$filtros['cnpj']}%";
+}
+
+if (!empty($filtros['email'])) {
+    $whereConditions[] = "f.email LIKE :email";
+    $params[':email'] = "%{$filtros['email']}%";
+}
+
+if (!empty($filtros['telefone'])) {
+    $whereConditions[] = "f.telefone LIKE :telefone";
+    $params[':telefone'] = "%{$filtros['telefone']}%";
+}
+
+if (!empty($filtros['status'])) {
+    if ($filtros['status'] === 'ativo') {
+        $whereConditions[] = "f.email IS NOT NULL AND f.email != ''";
+    } elseif ($filtros['status'] === 'inativo') {
+        $whereConditions[] = "(f.email IS NULL OR f.email = '')";
     }
-    
-    if (!empty($statusFilter)) {
-        if ($statusFilter === 'ativo') {
-            $whereConditions[] = "f.email IS NOT NULL AND f.email != ''";
-        } elseif ($statusFilter === 'inativo') {
-            $whereConditions[] = "(f.email IS NULL OR f.email = '')";
-        }
-    }
-    
-    $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+}
+
+// Filtro por data
+if (!empty($filtros['data_inicio'])) {
+    $whereConditions[] = "DATE(f.created_at) >= :data_inicio";
+    $params[':data_inicio'] = $filtros['data_inicio'];
+}
+
+if (!empty($filtros['data_fim'])) {
+    $whereConditions[] = "DATE(f.created_at) <= :data_fim";
+    $params[':data_fim'] = $filtros['data_fim'];
+}
+
+$whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
+// Construção da ordenação
+$orderBy = $validSortFields[$sortBy];
+if ($sortBy === 'status') {
+    $orderBy = "CASE WHEN f.email IS NOT NULL AND f.email != '' THEN 1 ELSE 0 END";
+}
 
     // Consulta para contar total de registros
     $sqlCount = "SELECT COUNT(*) as total FROM fornecedores f $whereClause";
@@ -368,6 +444,32 @@ if (file_exists('includes/header_template.php')) {
         renderHeader("Consulta de Fornecedores - LicitaSis", "fornecedores");
     }
 }
+
+// FUNÇÕES AUXILIARES PARA ORDENAÇÃO
+function getSortLink($field, $currentSort, $currentOrder) {
+    $params = $_GET;
+    $params['sort'] = $field;
+    
+    if ($currentSort === $field && $currentOrder === 'ASC') {
+        $params['order'] = 'DESC';
+    } else {
+        $params['order'] = 'ASC';
+    }
+    
+    return '?' . http_build_query($params);
+}
+
+function getSortIcon($field, $currentSort, $currentOrder) {
+    if ($currentSort !== $field) {
+        return '<i class="fas fa-sort sort-inactive"></i>';
+    }
+    
+    if ($currentOrder === 'ASC') {
+        return '<i class="fas fa-sort-up sort-active"></i>';
+    } else {
+        return '<i class="fas fa-sort-down sort-active"></i>';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -379,9 +481,44 @@ if (file_exists('includes/header_template.php')) {
     <link rel="icon" href="../public_html/assets/images/logo_combraz.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <style>
+<style>
+        :root {
+            --primary-color: #2D893E;
+            --primary-light: #9DCEAC;
+            --primary-dark: #1e6e2d;
+            --secondary-color: #00bfae;
+            --secondary-dark: #009d8f;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --dark-gray: #343a40;
+            --border-color: #dee2e6;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-hover: 0 6px 15px rgba(0,0,0,0.15);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 2.5rem auto;
             padding: 2.5rem;
             background: white;
@@ -496,7 +633,7 @@ if (file_exists('includes/header_template.php')) {
             box-shadow: var(--shadow);
         }
 
-        .stat-item.stat-navegavel::before {
+        .stat-navegavel::before {
             content: '';
             position: absolute;
             top: 0;
@@ -507,12 +644,12 @@ if (file_exists('includes/header_template.php')) {
             transition: left 0.6s ease;
         }
 
-        .stat-item.stat-navegavel:hover::before {
+        .stat-navegavel:hover::before {
             left: 100%;
         }
 
-        .stat-item.stat-navegavel:hover {
-            transform: translateY(-8px) scale(1.08);
+        .stat-navegavel:hover {
+            transform: translateY(-8px) scale(1.05);
             box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         }
 
@@ -545,66 +682,187 @@ if (file_exists('includes/header_template.php')) {
         }
 
         /* ===========================================
-           FILTROS
+           BOTÃO NOVO FORNECEDOR
+           =========================================== */
+        .novo-fornecedor-container {
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(32, 201, 151, 0.1) 100%);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 2px dashed var(--success-color);
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .btn-novo-fornecedor {
+            background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: var(--radius);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-novo-fornecedor::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn-novo-fornecedor:hover::before {
+            left: 100%;
+        }
+
+        .btn-novo-fornecedor:hover {
+            background: linear-gradient(135deg, #20c997 0%, var(--success-color) 100%);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+            text-decoration: none;
+            color: white;
+        }
+
+        .btn-novo-fornecedor i {
+            font-size: 1.3rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* ===========================================
+           FILTROS AVANÇADOS
            =========================================== */
         .filters-container {
-            margin-bottom: 2rem;
-            padding: 1.5rem;
             background: linear-gradient(135deg, var(--light-gray) 0%, #e9ecef 100%);
             border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
             border: 1px solid var(--border-color);
         }
 
-        .filters-row {
-            display: grid;
-            grid-template-columns: 1fr auto auto auto auto;
-            gap: 1rem;
-            align-items: end;
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
         }
 
-        .search-group {
+        .filters-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-filters {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-filters:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+
+        .filters-content {
+            transition: var(--transition);
+        }
+
+        .filters-content.collapsed {
+            display: none;
+        }
+
+        .filters-main {
+            display: grid;
+            grid-template-columns: 2fr auto auto auto auto;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1.5rem;
+        }
+
+        .filters-advanced {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-group {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
 
-        .search-group label {
+        .filter-group label {
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--medium-gray);
             text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .search-input {
+        .filter-input, .filter-select {
             padding: 0.75rem 1rem;
             border: 2px solid var(--border-color);
             border-radius: var(--radius-sm);
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: var(--transition);
             background: white;
         }
 
-        .search-input:focus {
+        .filter-input:focus, .filter-select:focus {
             outline: none;
             border-color: var(--secondary-color);
             box-shadow: 0 0 0 3px rgba(0, 191, 174, 0.1);
         }
 
-        .filter-select {
-            padding: 0.75rem 1rem;
-            border: 2px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            background: white;
-            min-width: 140px;
+        .items-per-page {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-size: 0.9rem;
-            transition: var(--transition);
-            cursor: pointer;
+            color: var(--medium-gray);
         }
 
-        .filter-select:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(0, 191, 174, 0.1);
+        .items-per-page select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: white;
         }
 
         /* ===========================================
@@ -662,31 +920,6 @@ if (file_exists('includes/header_template.php')) {
         .btn-secondary:hover {
             background: linear-gradient(135deg, #5a6268 0%, var(--medium-gray) 100%);
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(108, 117, 125, 0.3);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, var(--warning-color) 0%, #e0a800 100%);
-            color: #212529;
-            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.2);
-        }
-
-        .btn-warning:hover {
-            background: linear-gradient(135deg, #e0a800 0%, var(--warning-color) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(255, 193, 7, 0.3);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger-color) 0%, #c82333 100%);
-            color: white;
-            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(135deg, #c82333 0%, var(--danger-color) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3);
         }
 
         .btn-success {
@@ -698,7 +931,28 @@ if (file_exists('includes/header_template.php')) {
         .btn-success:hover {
             background: linear-gradient(135deg, #218838 0%, var(--success-color) 100%);
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color) 0%, #e0a800 100%);
+            color: #212529;
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.2);
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e0a800 0%, var(--warning-color) 100%);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333 0%, var(--danger-color) 100%);
+            transform: translateY(-2px);
         }
 
         .btn-sm {
@@ -707,7 +961,7 @@ if (file_exists('includes/header_template.php')) {
         }
 
         /* ===========================================
-           TABELA
+           TABELA AVANÇADA
            =========================================== */
         .table-container {
             overflow-x: auto;
@@ -755,6 +1009,7 @@ if (file_exists('includes/header_template.php')) {
         table tbody tr:hover {
             background: linear-gradient(135deg, var(--light-gray) 0%, #f1f3f4 100%);
             transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         table tbody tr:nth-child(even) {
@@ -763,6 +1018,10 @@ if (file_exists('includes/header_template.php')) {
 
         table tbody tr:nth-child(even):hover {
             background: linear-gradient(135deg, var(--light-gray) 0%, #f1f3f4 100%);
+        }
+
+        table td {
+            vertical-align: middle;
         }
 
         .fornecedor-link {
@@ -784,10 +1043,6 @@ if (file_exists('includes/header_template.php')) {
             background: rgba(45, 137, 62, 0.1);
             transform: scale(1.05);
             box-shadow: 0 2px 8px rgba(0, 191, 174, 0.2);
-        }
-
-        .fornecedor-link i {
-            font-size: 0.8rem;
         }
 
         .status-badge {
@@ -814,17 +1069,60 @@ if (file_exists('includes/header_template.php')) {
         }
 
         /* ===========================================
+           ORDENAÇÃO DA TABELA
+           =========================================== */
+        .sort-icon {
+            opacity: 0.5;
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        th:hover .sort-icon {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .sort-asc {
+            opacity: 1;
+            color: var(--success-color);
+            transform: rotate(0deg);
+        }
+
+        .sort-desc {
+            opacity: 1;
+            color: var(--danger-color);
+            transform: rotate(180deg);
+        }
+
+        th[onclick] {
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        th[onclick]:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ===========================================
            PAGINAÇÃO
            =========================================== */
         .pagination-container {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             gap: 1rem;
             margin: 2rem 0;
             padding: 1.5rem;
             background: var(--light-gray);
             border-radius: var(--radius);
+            flex-wrap: wrap;
+        }
+
+        .pagination-info {
+            color: var(--medium-gray);
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .pagination {
@@ -865,12 +1163,6 @@ if (file_exists('includes/header_template.php')) {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-        }
-
-        .pagination-info {
-            color: var(--medium-gray);
-            font-size: 0.9rem;
-            font-weight: 500;
         }
 
         /* ===========================================
@@ -962,9 +1254,7 @@ if (file_exists('includes/header_template.php')) {
             flex-wrap: wrap;
         }
 
-        /* ===========================================
-           SEÇÕES DE DETALHES DO MODAL
-           =========================================== */
+        /* Seções de detalhes do modal */
         .fornecedor-details {
             display: grid;
             gap: 2rem;
@@ -1024,9 +1314,6 @@ if (file_exists('includes/header_template.php')) {
             font-size: 1.1rem;
         }
 
-        /* ===========================================
-           FORMULÁRIO DE EDIÇÃO NO MODAL
-           =========================================== */
         .form-control {
             width: 100%;
             padding: 0.75rem;
@@ -1041,27 +1328,6 @@ if (file_exists('includes/header_template.php')) {
             outline: none;
             border-color: var(--secondary-color);
             box-shadow: 0 0 0 3px rgba(0, 191, 174, 0.1);
-        }
-
-        .form-control:disabled {
-            background: var(--light-gray);
-            color: var(--medium-gray);
-            cursor: not-allowed;
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-control.is-invalid {
-            border-color: var(--danger-color);
-            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-        }
-
-        .form-control.is-valid {
-            border-color: var(--success-color);
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
         }
 
         .modal-buttons {
@@ -1095,6 +1361,14 @@ if (file_exists('includes/header_template.php')) {
         }
 
         /* ===========================================
+           ANIMAÇÕES AUXILIARES
+           =========================================== */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===========================================
            RESPONSIVIDADE
            =========================================== */
         @media (max-width: 1200px) {
@@ -1103,18 +1377,13 @@ if (file_exists('includes/header_template.php')) {
                 padding: 2rem;
             }
 
-            .modal-content {
-                width: 98%;
-                margin: 1% auto;
-            }
-
-            .filters-row {
+            .filters-main {
                 grid-template-columns: 1fr;
                 gap: 1rem;
             }
 
-            .filters-row > * {
-                width: 100%;
+            .filters-advanced {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
         }
 
@@ -1132,7 +1401,6 @@ if (file_exists('includes/header_template.php')) {
 
             .stats-container {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 0.75rem;
             }
 
             .pagination-container {
@@ -1148,32 +1416,25 @@ if (file_exists('includes/header_template.php')) {
                 padding: 0.75rem 0.5rem;
             }
 
-            .fornecedor-link {
-                padding: 0.25rem 0.5rem;
-            }
-
-            .modal-header {
-                padding: 1rem 1.5rem;
+            .filters-header {
                 flex-direction: column;
                 gap: 1rem;
-                text-align: center;
             }
 
-            .modal-body {
-                padding: 1.5rem;
-            }
-
-            .modal-footer {
-                padding: 1rem 1.5rem;
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-            }
-
-            .detail-grid {
+            .filters-advanced {
                 grid-template-columns: 1fr;
+            }
+
+            .btn-novo-fornecedor {
+                width: 100%;
+                justify-content: center;
+                padding: 1.2rem;
+                font-size: 1rem;
+            }
+            
+            .novo-fornecedor-container {
+                margin: 1.5rem 0;
+                padding: 1rem;
             }
         }
 
@@ -1183,23 +1444,8 @@ if (file_exists('includes/header_template.php')) {
                 padding: 1.25rem;
             }
 
-            h2 {
-                font-size: 1.5rem;
-            }
-
             .stats-container {
                 grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                width: 100%;
-                margin: 0;
-                border-radius: 0;
-                max-height: 100vh;
-            }
-
-            .modal-header {
-                border-radius: 0;
             }
 
             table {
@@ -1211,9 +1457,8 @@ if (file_exists('includes/header_template.php')) {
                 min-width: 100px;
             }
 
-            .fornecedor-link {
-                font-size: 0.8rem;
-                padding: 0.25rem 0.4rem;
+            .btn-novo-fornecedor span {
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -1280,30 +1525,66 @@ if (file_exists('includes/header_template.php')) {
         </div>
     </div>
 
+    <div class="novo-fornecedor-container">
+        <a href="cadastro_fornecedores.php" class="btn btn-success btn-novo-fornecedor">
+            <i class="fas fa-plus-circle"></i>
+            <span>Incluir Novo Fornecedor</span>
+        </a>
+    </div>
+
     <!-- ===========================================
          FILTROS AVANÇADOS
          =========================================== -->
-    <div class="filters-container">
-        <form action="consulta_fornecedores.php" method="GET" id="filtersForm">
-            <div class="filters-row">
-                <div class="search-group">
-                    <label for="search">Buscar por:</label>
+    <!-- FILTROS AVANÇADOS MELHORADOS -->
+<div class="filters-container">
+    <div class="filters-header">
+        <div class="filters-title">
+            <i class="fas fa-filter"></i>
+            Filtros Avançados de Pesquisa
+        </div>
+        <button type="button" class="toggle-filters" onclick="toggleAdvancedFilters()">
+            <i class="fas fa-chevron-down" id="toggleIcon"></i>
+            <span id="toggleText">Mostrar Filtros Avançados</span>
+        </button>
+    </div>
+
+    <form action="consulta_fornecedores.php" method="GET" id="filtersForm">
+        <div class="filters-content" id="filtersContent">
+            <!-- Filtros Principais -->
+            <div class="filters-main">
+                <div class="filter-group">
+                    <label for="search">
+                        <i class="fas fa-search"></i>
+                        Busca Geral:
+                    </label>
                     <input type="text" 
                            name="search" 
                            id="search" 
-                           class="search-input"
-                           placeholder="Nome, código, CNPJ ou email..." 
-                           value="<?php echo htmlspecialchars($searchTerm ?? ''); ?>"
+                           class="filter-input"
+                           placeholder="Buscar em todos os campos..." 
+                           value="<?php echo htmlspecialchars($filtros['search']); ?>"
                            autocomplete="off">
                 </div>
                 
-                <!-- Filtro por status -->
-                <div class="search-group">
-                    <label for="status">Status:</label>
+                <div class="filter-group">
+                    <label for="status">
+                        <i class="fas fa-toggle-on"></i>
+                        Status:
+                    </label>
                     <select name="status" id="status" class="filter-select">
                         <option value="">Todos os status</option>
-                        <option value="ativo" <?php echo $statusFilter === 'ativo' ? 'selected' : ''; ?>>Ativos</option>
-                        <option value="inativo" <?php echo $statusFilter === 'inativo' ? 'selected' : ''; ?>>Inativos</option>
+                        <option value="ativo" <?php echo $filtros['status'] === 'ativo' ? 'selected' : ''; ?>>Ativos</option>
+                        <option value="inativo" <?php echo $filtros['status'] === 'inativo' ? 'selected' : ''; ?>>Inativos</option>
+                    </select>
+                </div>
+                
+                <div class="items-per-page">
+                    <label>Itens por página:</label>
+                    <select name="items_per_page" onchange="this.form.submit()">
+                        <option value="10" <?php echo $itensPorPagina == 10 ? 'selected' : ''; ?>>10</option>
+                        <option value="20" <?php echo $itensPorPagina == 20 ? 'selected' : ''; ?>>20</option>
+                        <option value="50" <?php echo $itensPorPagina == 50 ? 'selected' : ''; ?>>50</option>
+                        <option value="100" <?php echo $itensPorPagina == 100 ? 'selected' : ''; ?>>100</option>
                     </select>
                 </div>
                 
@@ -1316,14 +1597,94 @@ if (file_exists('includes/header_template.php')) {
                     <i class="fas fa-undo"></i> 
                     Limpar
                 </button>
-
-                <a href="cadastro_fornecedores.php" class="btn btn-success">
-                    <i class="fas fa-plus"></i> 
-                    Novo Fornecedor
-                </a>
             </div>
-        </form>
-    </div>
+
+            <!-- Filtros Avançados -->
+            <div class="filters-advanced">
+                <div class="filter-group">
+                    <label for="nome">
+                        <i class="fas fa-building"></i>
+                        Nome:
+                    </label>
+                    <input type="text" 
+                           name="nome" 
+                           id="nome" 
+                           class="filter-input"
+                           placeholder="Filtrar por nome..." 
+                           value="<?php echo htmlspecialchars($filtros['nome']); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <label for="cnpj">
+                        <i class="fas fa-id-card"></i>
+                        CNPJ:
+                    </label>
+                    <input type="text" 
+                           name="cnpj" 
+                           id="cnpj" 
+                           class="filter-input"
+                           placeholder="Filtrar por CNPJ..." 
+                           value="<?php echo htmlspecialchars($filtros['cnpj']); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i>
+                        Email:
+                    </label>
+                    <input type="email" 
+                           name="email" 
+                           id="email" 
+                           class="filter-input"
+                           placeholder="Filtrar por email..." 
+                           value="<?php echo htmlspecialchars($filtros['email']); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <label for="telefone">
+                        <i class="fas fa-phone"></i>
+                        Telefone:
+                    </label>
+                    <input type="text" 
+                           name="telefone" 
+                           id="telefone" 
+                           class="filter-input"
+                           placeholder="Filtrar por telefone..." 
+                           value="<?php echo htmlspecialchars($filtros['telefone']); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <label for="data_inicio">
+                        <i class="fas fa-calendar-alt"></i>
+                        Data Início:
+                    </label>
+                    <input type="date" 
+                           name="data_inicio" 
+                           id="data_inicio" 
+                           class="filter-input"
+                           value="<?php echo htmlspecialchars($filtros['data_inicio']); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <label for="data_fim">
+                        <i class="fas fa-calendar-check"></i>
+                        Data Fim:
+                    </label>
+                    <input type="date" 
+                           name="data_fim" 
+                           id="data_fim" 
+                           class="filter-input"
+                           value="<?php echo htmlspecialchars($filtros['data_fim']); ?>">
+                </div>
+            </div>
+        </div>
+
+        <!-- Campos ocultos para manter ordenação -->
+        <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sortBy); ?>">
+        <input type="hidden" name="order" value="<?php echo htmlspecialchars($sortOrder); ?>">
+    </form>
+</div>
+   
 
     <!-- ===========================================
          TABELA DE FORNECEDORES
@@ -1331,16 +1692,34 @@ if (file_exists('includes/header_template.php')) {
     <?php if (count($fornecedores) > 0): ?>
         <div class="table-container">
             <table>
-                <thead>
-                    <tr>
-                        <th><i class="fas fa-id-card"></i> CNPJ</th>
-                        <th><i class="fas fa-building"></i> Nome</th>
-                        <th><i class="fas fa-envelope"></i> Email</th>
-                        <th><i class="fas fa-phone"></i> Telefone</th>
-                        <th><i class="fas fa-tags"></i> Status</th>
-                        <th><i class="fas fa-calendar"></i> Cadastro</th>
-                    </tr>
-                </thead>
+    <thead>
+        <tr>
+            <th onclick="ordenarTabela('cnpj')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-id-card"></i> CNPJ 
+                <i class="fas fa-sort sort-icon" id="sort-cnpj"></i>
+            </th>
+            <th onclick="ordenarTabela('nome')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-building"></i> Nome 
+                <i class="fas fa-sort sort-icon" id="sort-nome"></i>
+            </th>
+            <th onclick="ordenarTabela('email')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-envelope"></i> Email 
+                <i class="fas fa-sort sort-icon" id="sort-email"></i>
+            </th>
+            <th onclick="ordenarTabela('telefone')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-phone"></i> Telefone 
+                <i class="fas fa-sort sort-icon" id="sort-telefone"></i>
+            </th>
+            <th onclick="ordenarTabela('status')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-toggle-on"></i> Status 
+                <i class="fas fa-sort sort-icon" id="sort-status"></i>
+            </th>
+            <th onclick="ordenarTabela('created_at')" style="cursor: pointer;" title="Clique para ordenar">
+                <i class="fas fa-calendar"></i> Cadastro 
+                <i class="fas fa-sort sort-icon" id="sort-created_at"></i>
+            </th>
+        </tr>
+    </thead>
                 <tbody>
                     <?php foreach ($fornecedores as $fornecedor): ?>
                         <tr>
@@ -1486,7 +1865,7 @@ if (file_exists('includes/header_template.php')) {
         </div>
     </div>
 </div>
-
+ </div>
 <script>
 // ===========================================
 // SISTEMA COMPLETO DE CONSULTA DE FORNECEDORES
@@ -2034,13 +2413,87 @@ function imprimirFornecedor() {
 /**
  * Limpa todos os filtros
  */
-function limparFiltros() {
-    const form = document.getElementById('filtersForm');
-    if (form) {
-        form.reset();
-        form.submit();
+// FUNÇÕES DE ORDENAÇÃO E FILTROS AVANÇADOS
+function sortTable(field) {
+    const currentSort = new URLSearchParams(window.location.search).get('sort');
+    const currentOrder = new URLSearchParams(window.location.search).get('order');
+    
+    const params = new URLSearchParams(window.location.search);
+    params.set('sort', field);
+    
+    // Inverte a ordem se já estiver ordenando pelo mesmo campo
+    if (currentSort === field && currentOrder === 'ASC') {
+        params.set('order', 'DESC');
+    } else {
+        params.set('order', 'ASC');
+    }
+    
+    // Remove a página para voltar à primeira
+    params.delete('pagina');
+    
+    // Redireciona com nova ordenação
+    window.location.href = '?' + params.toString();
+}
+
+function toggleAdvancedFilters() {
+    const filtersContent = document.getElementById('filtersContent');
+    const toggleIcon = document.getElementById('toggleIcon');
+    const toggleText = document.getElementById('toggleText');
+    
+    advancedFiltersVisible = !advancedFiltersVisible;
+    
+    if (advancedFiltersVisible) {
+        filtersContent.classList.remove('collapsed');
+        toggleIcon.className = 'fas fa-chevron-up';
+        toggleText.textContent = 'Ocultar Filtros Avançados';
+    } else {
+        filtersContent.classList.add('collapsed');
+        toggleIcon.className = 'fas fa-chevron-down';
+        toggleText.textContent = 'Mostrar Filtros Avançados';
     }
 }
+
+function limparFiltros() {
+    // Redireciona para a página sem parâmetros de filtro
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams();
+    
+    // Mantém apenas os parâmetros essenciais
+    if (url.searchParams.get('items_per_page')) {
+        params.set('items_per_page', url.searchParams.get('items_per_page'));
+    }
+    
+    window.location.href = url.pathname + (params.toString() ? '?' + params.toString() : '');
+}
+
+function navegarParaDetalhes(tipo) {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    
+    // Limpa filtros existentes de status
+    params.delete('status');
+    params.delete('pagina');
+    
+    switch(tipo) {
+        case 'todos':
+            // Remove filtro de status para mostrar todos
+            break;
+        case 'ativo':
+            params.set('status', 'ativo');
+            break;
+        case 'inativo':
+            params.set('status', 'inativo');
+            break;
+        default:
+            showToast('Filtro não implementado: ' + tipo, 'warning');
+            return;
+    }
+    
+    window.location.href = url.pathname + '?' + params.toString();
+}
+
+// Variável global para controle dos filtros
+let advancedFiltersVisible = false;
 
 /**
  * Navega para detalhes baseado em estatísticas
@@ -2405,6 +2858,76 @@ function validarCNPJ(cnpj) {
     
     return true;
 }
+
+// ===========================================
+// SISTEMA DE ORDENAÇÃO DA TABELA
+// ===========================================
+
+let currentSort = {
+    column: null,
+    direction: 'asc'
+};
+
+/**
+ * Ordena a tabela por coluna
+ */
+function ordenarTabela(coluna) {
+    console.log('🔄 Ordenando tabela por:', coluna);
+    
+    // Determina direção da ordenação
+    if (currentSort.column === coluna) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.direction = 'asc';
+    }
+    
+    currentSort.column = coluna;
+    
+    // Atualiza ícones de ordenação
+    atualizarIconesOrdenacao(coluna, currentSort.direction);
+    
+    // Obtém parâmetros atuais da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('sort', coluna);
+    urlParams.set('order', currentSort.direction);
+    urlParams.delete('pagina'); // Reset para primeira página
+    
+    // Recarrega a página com nova ordenação
+    window.location.href = window.location.pathname + '?' + urlParams.toString();
+}
+
+/**
+ * Atualiza ícones de ordenação
+ */
+function atualizarIconesOrdenacao(colunaAtiva, direcao) {
+    // Remove classes de todos os ícones
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Adiciona classe ao ícone ativo
+    const iconAtivo = document.getElementById('sort-' + colunaAtiva);
+    if (iconAtivo) {
+        if (direcao === 'asc') {
+            iconAtivo.className = 'fas fa-sort-up sort-icon sort-asc';
+        } else {
+            iconAtivo.className = 'fas fa-sort-down sort-icon sort-desc';
+        }
+    }
+}
+
+// Inicializa ordenação baseada na URL
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ordenar = urlParams.get('sort');
+    const direcao = urlParams.get('order') || 'asc';
+    
+    if (ordenar) {
+        currentSort.column = ordenar;
+        currentSort.direction = direcao;
+        atualizarIconesOrdenacao(ordenar, direcao);
+    }
+});
 
 console.log('✅ Sistema de Consulta de Fornecedores totalmente carregado e funcional!');
 </script>

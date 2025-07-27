@@ -40,7 +40,7 @@ function renderHeader($pageTitle = "LicitaSis", $currentPage = "", $includeFoote
         </button>
         
         <a href="index.php">
-            <img src="../public_html/assets/images/logo_combraz_licitasis.png" alt="Logo LicitaSis" class="logo">
+            <img src="../public_html/assets/images/licitasis_logo.png" alt="Logo LicitaSis" class="logo">
         </a>
         
         <div class="user-info">

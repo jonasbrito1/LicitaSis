@@ -59,20 +59,6 @@ $contasPorPagina = 20;
 $paginaAtual = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($paginaAtual - 1) * $contasPorPagina;
 
-// INICIALIZAÇÃO DE VARIÁVEIS DE ORDENAÇÃO
-$orderBy = isset($_GET['order']) ? trim($_GET['order']) : 'v.data_vencimento';
-$orderDirection = isset($_GET['dir']) && strtoupper($_GET['dir']) === 'DESC' ? 'DESC' : 'ASC';
-
-// Lista dos campos válidos para ordenação (segurança)
-$validOrderFields = [
-    'v.nf', 'c.nome_orgaos', 'v.cliente_uasg', 'v.valor_total', 
-    'v.status_pagamento', 'v.data_vencimento'
-];
-
-if (!in_array($orderBy, $validOrderFields)) {
-    $orderBy = 'v.data_vencimento';
-}
-
 require_once('db.php');
 
 // ===========================================
@@ -115,7 +101,7 @@ function converterDataParaMySQL($data) {
 }
 
 // ===========================================
-// PROCESSAMENTO AJAX - INCLUSÃO DE NOVA CONTA - VERSÃO CORRIGIDA
+// PROCESSAMENTO AJAX - INCLUSÃO DE NOVA CONTA
 // ===========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['incluir_conta'])) {
     // Limpa qualquer output anterior
@@ -127,75 +113,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['incluir_conta'])) {
     try {
         $pdo->beginTransaction();
         
-        // Debug dos dados recebidos
-        error_log("=== DADOS RECEBIDOS PARA INCLUSÃO ===");
-        error_log("POST: " . print_r($_POST, true));
-        
-        // Sanitiza e valida os dados - VERSÃO MELHORADA
-        $clienteCompleto = trim($_POST['cliente'] ?? '');
-        $clienteNome = trim($_POST['cliente_nome'] ?? '');
-        $clienteUasg = trim($_POST['cliente_uasg'] ?? '');
-        $clienteId = !empty($_POST['cliente_id']) ? intval($_POST['cliente_id']) : null;
-        
-        // Se temos dados separados do autocomplete, usar eles
-        if (!empty($clienteNome) && !empty($clienteUasg)) {
-            error_log("✅ Usando dados do cliente selecionado do autocomplete");
-            error_log("Cliente Nome: '$clienteNome', UASG: '$clienteUasg', ID: $clienteId");
-        } else {
-            // Fallback: extrair dados do campo completo (cliente digitado manualmente)
-            error_log("⚠️ Extraindo dados do campo cliente: '$clienteCompleto'");
-            
-            if (preg_match('/^(.+?)\s*\(([^)]+)\)$/', $clienteCompleto, $matches)) {
-                $clienteNome = trim($matches[1]);
-                $clienteUasg = trim($matches[2]);
-                error_log("Extraído - Nome: '$clienteNome', UASG: '$clienteUasg'");
-            } else {
-                // Se não está no formato esperado, usar o valor completo como nome
-                $clienteNome = $clienteCompleto;
-                
-                // Tentar extrair UASG de qualquer lugar do texto
-                if (preg_match('/(\d{6,})/', $clienteCompleto, $uasgMatch)) {
-                    $clienteUasg = $uasgMatch[1];
-                    // Remove o UASG do nome
-                    $clienteNome = trim(str_replace($uasgMatch[0], '', $clienteCompleto));
-                    error_log("UASG extraído do texto - Nome: '$clienteNome', UASG: '$clienteUasg'");
-                } else {
-                    $clienteUasg = $clienteCompleto; // Usar como UASG se não conseguir extrair
-                }
-            }
-        }
-        
-        // Preparar dados para inserção
-        $dados = [
-            'nf' => 'CR-' . date('YmdHis'), // Gera número automático para conta a receber
-            'numero' => date('YmdHis'), // Número sequencial baseado em timestamp
-            'cliente' => $clienteNome,
-            'cliente_uasg' => $clienteUasg,
-            'transportadora' => 'N/A', // Campo obrigatório na tabela
-            'valor_total' => !empty($_POST['valor_total']) ? str_replace(',', '.', $_POST['valor_total']) : null,
-            'classificacao' => trim($_POST['tipo_receita'] ?? ''),
-            'observacao' => trim($_POST['informacoes_adicionais'] ?? ''),
-            'data' => $_POST['data'] ?? date('Y-m-d'),
-            'data_vencimento' => $_POST['data_vencimento'] ?? null,
-            'status_pagamento' => 'Não Recebido',
-            'pregao' => ''
-        ];
-        
-        // Log dos dados finais
-        error_log("=== DADOS FINAIS PARA INSERÇÃO ===");
-        error_log("Dados: " . print_r($dados, true));
-        
-        // Validações obrigatórias
+        // Sanitiza e valida os dados
+      // Sanitiza e valida os dados
+$clienteCompleto = trim($_POST['cliente'] ?? '');
+
+// Extrair nome e UASG do formato "NOME (UASG)"
+$clienteNome = '';
+$clienteUasg = '';
+
+if (preg_match('/^(.+?)\s*\(([^)]+)\)$/', $clienteCompleto, $matches)) {
+    $clienteNome = trim($matches[1]);
+    $clienteUasg = trim($matches[2]);
+} else {
+    // Se não está no formato esperado, buscar na base de dados ou usar o valor completo
+    $clienteNome = $clienteCompleto;
+    
+    // Tentar extrair UASG de qualquer lugar do texto
+    if (preg_match('/(\d{6,})/', $clienteCompleto, $uasgMatch)) {
+        $clienteUasg = $uasgMatch[1];
+    } else {
+        $clienteUasg = $clienteCompleto;
+    }
+}
+
+$dados = [
+    'nf' => 'CR-' . date('YmdHis'), // Gera número automático para conta a receber
+    'numero' => date('YmdHis'), // Número sequencial baseado em timestamp
+    'cliente' => $clienteNome,
+    'cliente_uasg' => $clienteUasg,
+    'transportadora' => 'N/A', // Campo obrigatório na tabela
+    'valor_total' => !empty($_POST['valor_total']) ? str_replace(',', '.', $_POST['valor_total']) : null,
+    'classificacao' => trim($_POST['tipo_receita'] ?? ''),
+    'observacao' => trim($_POST['informacoes_adicionais'] ?? ''),
+    'data' => $_POST['data'] ?? date('Y-m-d'),
+    'data_vencimento' => $_POST['data_vencimento'] ?? null,
+    'status_pagamento' => 'Não Recebido',
+    'pregao' => ''
+];
+
+// Validações obrigatórias
         if (empty($dados['cliente'])) {
-            throw new Exception("Nome do cliente é obrigatório.");
-        }
-        if (empty($dados['cliente_uasg'])) {
-            throw new Exception("UASG do cliente é obrigatório.");
+            throw new Exception("Cliente é obrigatório.");
         }
         if (empty($dados['classificacao'])) {
             throw new Exception("Tipo de Receita é obrigatório.");
         }
-        if (empty($dados['valor_total']) || floatval($dados['valor_total']) <= 0) {
+        if (empty($dados['valor_total']) || $dados['valor_total'] <= 0) {
             throw new Exception("Valor Total é obrigatório e deve ser maior que zero.");
         }
         if (empty($dados['data_vencimento'])) {
@@ -205,120 +168,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['incluir_conta'])) {
         // Converte datas para formato MySQL
         $dados['data'] = converterDataParaMySQL($dados['data']);
         $dados['data_vencimento'] = converterDataParaMySQL($dados['data_vencimento']);
-        
-        if (!$dados['data']) {
-            $dados['data'] = date('Y-m-d'); // Usa hoje se data inválida
-        }
-        if (!$dados['data_vencimento']) {
-            throw new Exception("Data de vencimento inválida.");
-        }
 
-        // Verifica se o cliente existe na tabela clientes (opcional)
-        if ($clienteId) {
-            $checkClienteSql = "SELECT id, nome_orgaos FROM clientes WHERE id = :cliente_id";
-            $checkClienteStmt = $pdo->prepare($checkClienteSql);
-            $checkClienteStmt->execute([':cliente_id' => $clienteId]);
-            $clienteExistente = $checkClienteStmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($clienteExistente) {
-                error_log("✅ Cliente encontrado na base: " . $clienteExistente['nome_orgaos']);
-                // Opcionalmente, usar o nome oficial da base de dados
-                // $dados['cliente'] = $clienteExistente['nome_orgaos'];
-            } else {
-                error_log("⚠️ Cliente ID $clienteId não encontrado na base");
-            }
-        } else {
-            // Tentar encontrar cliente por UASG
-            $findClienteSql = "SELECT id, nome_orgaos FROM clientes WHERE uasg = :uasg LIMIT 1";
-            $findClienteStmt = $pdo->prepare($findClienteSql);
-            $findClienteStmt->execute([':uasg' => $dados['cliente_uasg']]);
-            $clienteEncontrado = $findClienteStmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($clienteEncontrado) {
-                error_log("✅ Cliente encontrado por UASG: " . $clienteEncontrado['nome_orgaos']);
-                $clienteId = $clienteEncontrado['id'];
-                // Opcionalmente, usar o nome oficial
-                // $dados['cliente'] = $clienteEncontrado['nome_orgaos'];
-            } else {
-                error_log("⚠️ Cliente com UASG '{$dados['cliente_uasg']}' não encontrado na base");
-            }
-        }
 
-        // Insere a nova conta
-        $sql = "INSERT INTO vendas (
-                    numero, nf, cliente, cliente_uasg, transportadora, 
-                    valor_total, classificacao, observacao, data, data_vencimento, 
-                    status_pagamento, pregao, created_at
-                ) VALUES (
-                    :numero, :nf, :cliente, :cliente_uasg, :transportadora, 
-                    :valor_total, :classificacao, :observacao, :data, :data_vencimento, 
-                    :status_pagamento, :pregao, NOW()
-                )";
+      // Insere a nova conta
+// Insere a nova conta
+$sql = "INSERT INTO vendas (numero, nf, cliente, cliente_uasg, transportadora, valor_total, classificacao, observacao, data, data_vencimento, status_pagamento, pregao, created_at) 
+        VALUES (:numero, :nf, :cliente, :cliente_uasg, :transportadora, :valor_total, :classificacao, :observacao, :data, :data_vencimento, :status_pagamento, :pregao, NOW())";
         
-        $stmt = $pdo->prepare($sql);
-        
-        // Bind parameters com validação de tipos
-        $stmt->bindValue(':numero', $dados['numero'], PDO::PARAM_STR);
-        $stmt->bindValue(':nf', $dados['nf'], PDO::PARAM_STR);
-        $stmt->bindValue(':cliente', $dados['cliente'], PDO::PARAM_STR);
-        $stmt->bindValue(':cliente_uasg', $dados['cliente_uasg'], PDO::PARAM_STR);
-        $stmt->bindValue(':transportadora', $dados['transportadora'], PDO::PARAM_STR);
-        $stmt->bindValue(':valor_total', $dados['valor_total'], PDO::PARAM_STR);
-        $stmt->bindValue(':classificacao', $dados['classificacao'], PDO::PARAM_STR);
-        $stmt->bindValue(':observacao', $dados['observacao'], PDO::PARAM_STR);
-        $stmt->bindValue(':data', $dados['data'], PDO::PARAM_STR);
-        $stmt->bindValue(':data_vencimento', $dados['data_vencimento'], PDO::PARAM_STR);
-        $stmt->bindValue(':status_pagamento', $dados['status_pagamento'], PDO::PARAM_STR);
-        $stmt->bindValue(':pregao', $dados['pregao'], PDO::PARAM_STR);
+       // Bind parameters
+// Bind parameters
+$stmt->bindValue(':numero', $dados['numero'], PDO::PARAM_STR);
+$stmt->bindValue(':nf', $dados['nf'], PDO::PARAM_STR);
+$stmt->bindValue(':cliente', $dados['cliente'], PDO::PARAM_STR);
+$stmt->bindValue(':cliente_uasg', $dados['cliente_uasg'], PDO::PARAM_STR);
+$stmt->bindValue(':transportadora', $dados['transportadora'], PDO::PARAM_STR);
+$stmt->bindValue(':valor_total', $dados['valor_total'], PDO::PARAM_STR);
+$stmt->bindValue(':classificacao', $dados['classificacao'], PDO::PARAM_STR);
+$stmt->bindValue(':observacao', $dados['observacao'], PDO::PARAM_STR);
+$stmt->bindValue(':data', $dados['data'], PDO::PARAM_STR);
+$stmt->bindValue(':data_vencimento', $dados['data_vencimento'], PDO::PARAM_STR);
+$stmt->bindValue(':status_pagamento', $dados['status_pagamento'], PDO::PARAM_STR);
+$stmt->bindValue(':pregao', $dados['pregao'], PDO::PARAM_STR);
         
         if (!$stmt->execute()) {
             $errorInfo = $stmt->errorInfo();
-            error_log("❌ Erro SQL: " . print_r($errorInfo, true));
             throw new Exception("Erro ao inserir a conta: " . $errorInfo[2]);
         }
 
         $novoId = $pdo->lastInsertId();
-        error_log("✅ Conta inserida com ID: $novoId");
 
         // Registra auditoria
-        $dadosAuditoria = $dados;
-        $dadosAuditoria['cliente_id_encontrado'] = $clienteId;
-        $dadosAuditoria['metodo_selecao'] = !empty($_POST['cliente_nome']) ? 'autocomplete' : 'manual';
-        
-        logAudit($pdo, $_SESSION['user']['id'], 'INSERT', 'vendas', $novoId, $dadosAuditoria);
+        logAudit($pdo, $_SESSION['user']['id'], 'INSERT', 'vendas', $novoId, $dados);
 
         $pdo->commit();
         $response['success'] = true;
-        $response['message'] = "Conta a receber incluída com sucesso!";
+        $response['message'] = "Conta incluída com sucesso!";
         $response['id'] = $novoId;
-        $response['dados'] = [
-            'nf' => $dados['nf'],
-            'cliente' => $dados['cliente'],
-            'valor' => $dados['valor_total'],
-            'vencimento' => $dados['data_vencimento']
-        ];
-        
-        error_log("✅ Inclusão realizada com sucesso - ID: $novoId");
         
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         $response['error'] = $e->getMessage();
-        error_log("❌ Erro ao incluir conta: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
+        error_log("Erro ao incluir conta: " . $e->getMessage());
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         $response['error'] = "Erro de banco de dados: " . $e->getMessage();
-        error_log("❌ Erro PDO ao incluir conta: " . $e->getMessage());
-        error_log("SQL State: " . $e->getCode());
+        error_log("Erro PDO ao incluir conta: " . $e->getMessage());
     }
 
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit();
 }
+
+
 // ===========================================
 // PROCESSAMENTO AJAX - ATUALIZAÇÃO DE VENDA
 // ===========================================
@@ -668,13 +573,13 @@ try {
         $countStmt->execute();
         $totalContas = $countStmt->fetch()['total'];
         
-// Busca contas com paginação
+        // Busca contas com paginação
         $sql = "SELECT v.id, v.nf, v.cliente_uasg, c.nome_orgaos as cliente_nome, v.valor_total, v.status_pagamento, v.data_vencimento 
                 FROM vendas v
                 LEFT JOIN clientes c ON v.cliente_uasg = c.uasg
                 WHERE (v.status_pagamento = 'Não Recebido' OR v.status_pagamento IS NULL)
                 AND (v.nf LIKE :searchTerm OR c.nome_orgaos LIKE :searchTerm OR v.cliente_uasg LIKE :searchTerm)
-                ORDER BY $orderBy $orderDirection
+                ORDER BY v.data_vencimento ASC, v.nf ASC
                 LIMIT :limit OFFSET :offset";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':searchTerm', $searchParam);
@@ -687,13 +592,14 @@ try {
         $countStmt = $pdo->query("SELECT COUNT(*) as total FROM vendas WHERE status_pagamento = 'Não Recebido'");
         $totalContas = $countStmt->fetch()['total'];
         
-// Busca todas as contas com paginação
+        // Busca todas as contas com paginação
         $sql = "SELECT v.id, v.nf, v.cliente_uasg, c.nome_orgaos as cliente_nome, v.valor_total, v.status_pagamento, v.data_vencimento 
                 FROM vendas v
                 LEFT JOIN clientes c ON v.cliente_uasg = c.uasg
                 WHERE v.status_pagamento = 'Não Recebido'
-                ORDER BY $orderBy $orderDirection
-                LIMIT :limit OFFSET :offset";        $stmt = $pdo->prepare($sql);
+                ORDER BY v.data_vencimento DESC, v.nf ASC
+                LIMIT :limit OFFSET :offset";
+        $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':limit', $contasPorPagina, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -2254,19 +2160,6 @@ startPage("Contas a Receber - LicitaSis", "financeiro");
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
-
-    table th a {
-    color: white;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: var(--transition);
-}
-
-table th a:hover {
-    color: #e6f3ff;
-}
 </style>
 </head>
 <body>
@@ -2325,10 +2218,6 @@ table th a:hover {
                     <i class="fas fa-times"></i> Limpar
                 </a>
             <?php endif; ?>
-            
-            <!-- Campos ocultos para manter ordenação -->
-            <input type="hidden" name="order" value="<?php echo htmlspecialchars($orderBy); ?>">
-            <input type="hidden" name="dir" value="<?php echo htmlspecialchars($orderDirection); ?>">
         </form>
         
         <?php if ($permissionManager->hasPagePermission('vendas', 'create')): ?>
@@ -2368,50 +2257,16 @@ table th a:hover {
         <div class="table-container">
             <div class="table-responsive">
                 <table>
-<thead>
+                    <thead>
                         <tr>
-                            <th>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['order' => 'v.nf', 'dir' => ($orderBy == 'v.nf' && $orderDirection == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                    <i class="fas fa-file-invoice"></i> NF
-                                    <?php if ($orderBy == 'v.nf'): ?>
-                                        <i class="fas fa-sort-<?php echo $orderDirection == 'ASC' ? 'up' : 'down'; ?>"></i>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['order' => 'c.nome_orgaos', 'dir' => ($orderBy == 'c.nome_orgaos' && $orderDirection == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                    <i class="fas fa-building"></i> Cliente
-                                    <?php if ($orderBy == 'c.nome_orgaos'): ?>
-                                        <i class="fas fa-sort-<?php echo $orderDirection == 'ASC' ? 'up' : 'down'; ?>"></i>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['order' => 'v.valor_total', 'dir' => ($orderBy == 'v.valor_total' && $orderDirection == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                    <i class="fas fa-dollar-sign"></i> Valor Total
-                                    <?php if ($orderBy == 'v.valor_total'): ?>
-                                        <i class="fas fa-sort-<?php echo $orderDirection == 'ASC' ? 'up' : 'down'; ?>"></i>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['order' => 'v.status_pagamento', 'dir' => ($orderBy == 'v.status_pagamento' && $orderDirection == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                    <i class="fas fa-tasks"></i> Status
-                                    <?php if ($orderBy == 'v.status_pagamento'): ?>
-                                        <i class="fas fa-sort-<?php echo $orderDirection == 'ASC' ? 'up' : 'down'; ?>"></i>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['order' => 'v.data_vencimento', 'dir' => ($orderBy == 'v.data_vencimento' && $orderDirection == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                    <i class="fas fa-calendar"></i> Vencimento
-                                    <?php if ($orderBy == 'v.data_vencimento'): ?>
-                                        <i class="fas fa-sort-<?php echo $orderDirection == 'ASC' ? 'up' : 'down'; ?>"></i>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
+                            <th><i class="fas fa-file-invoice"></i> NF</th>
+                            <th><i class="fas fa-building"></i> Cliente</th>
+                            <th><i class="fas fa-dollar-sign"></i> Valor Total</th>
+                            <th><i class="fas fa-tasks"></i> Status</th>
+                            <th><i class="fas fa-calendar"></i> Vencimento</th>
                         </tr>
-                    </thead>                    <tbody>
+                    </thead>
+                    <tbody>
                         <?php foreach ($contas_a_receber as $conta): 
                             $dataVencimento = new DateTime($conta['data_vencimento']);
                             $hoje = new DateTime();
@@ -2841,10 +2696,11 @@ table th a:hover {
         </div>
     </div>
 </div>
+
 <script>
 // ===========================================
 // SISTEMA COMPLETO DE CONTAS A RECEBER COM EDIÇÃO E EXCLUSÃO
-// JavaScript Completo - LicitaSis v2.0 FINAL
+// JavaScript Completo - LicitaSis v2.0 ATUALIZADO
 // ===========================================
 
 // ===========================================
@@ -2856,13 +2712,8 @@ let currentVendaId = null;
 let currentVendaData = null;
 let isEditingVenda = false;
 
-// Variáveis do autocomplete
-let clientesSearchTimeout;
-let selectedClienteIndex = -1;
-let clientesSuggestions = [];
-
 // ===========================================
-// FUNÇÕES DE CONTROLE DO MODAL PRINCIPAL
+// FUNÇÕES DE CONTROLE DO MODAL
 // ===========================================
 
 /**
@@ -2961,7 +2812,7 @@ window.openModal = function(id) {
 };
 
 /**
- * Renderiza os detalhes completos da venda no modal
+ * Renderiza os detalhes completos da venda no modal - VERSÃO SIMPLIFICADA
  */
 function renderVendaDetails(venda) {
     console.log('🎨 Renderizando detalhes da venda:', venda);
@@ -3275,33 +3126,6 @@ function renderVendaDetails(venda) {
     console.log('✅ Detalhes da venda renderizados com sucesso');
 }
 
-/**
- * Fecha o modal
- */
-window.closeModal = function() {
-    if (isEditingVenda) {
-        const confirmClose = confirm(
-            'Você está editando a venda.\n\n' +
-            'Tem certeza que deseja fechar sem salvar as alterações?\n\n' +
-            'As alterações não salvas serão perdidas.'
-        );
-        
-        if (!confirmClose) {
-            return;
-        }
-    }
-    
-    const modal = document.getElementById("editModal");
-    modal.style.display = "none";
-    document.body.style.overflow = 'auto';
-    
-    currentVendaId = null;
-    currentVendaData = null;
-    isEditingVenda = false;
-    
-    console.log('✅ Modal fechado');
-};
-
 // ===========================================
 // FUNÇÕES UTILITÁRIAS PARA RENDERIZAÇÃO
 // ===========================================
@@ -3315,6 +3139,45 @@ function formatEmail(email) {
         return `<a href="mailto:${email}" style="color: var(--secondary-color); text-decoration: none;">${email}</a>`;
     }
     return email;
+}
+
+/**
+ * Função para formatar datas
+ */
+function formatDate(dateString) {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+        return dateString;
+    }
+}
+
+/**
+ * Função para formatar data e hora
+ */
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '';
+    try {
+        const date = new Date(dateTimeString);
+        return date.toLocaleString('pt-BR');
+    } catch (error) {
+        return dateTimeString;
+    }
+}
+
+/**
+ * Função para formatar moeda
+ */
+function formatCurrency(value) {
+    if (!value) return 'R$ 0,00';
+    try {
+        const numValue = parseFloat(value);
+        return 'R$ ' + numValue.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    } catch (error) {
+        return 'R$ 0,00';
+    }
 }
 
 /**
@@ -3363,6 +3226,33 @@ function formatPhone(phone) {
         return phone;
     }
 }
+
+/**
+ * Fecha o modal
+ */
+window.closeModal = function() {
+    if (isEditingVenda) {
+        const confirmClose = confirm(
+            'Você está editando a venda.\n\n' +
+            'Tem certeza que deseja fechar sem salvar as alterações?\n\n' +
+            'As alterações não salvas serão perdidas.'
+        );
+        
+        if (!confirmClose) {
+            return;
+        }
+    }
+    
+    const modal = document.getElementById("editModal");
+    modal.style.display = "none";
+    document.body.style.overflow = 'auto';
+    
+    currentVendaId = null;
+    currentVendaData = null;
+    isEditingVenda = false;
+    
+    console.log('✅ Modal fechado');
+};
 
 // ===========================================
 // FUNÇÕES DE EDIÇÃO DA VENDA
@@ -3662,604 +3552,7 @@ function imprimirVenda() {
 }
 
 // ===========================================
-// SISTEMA DE BUSCA DE CLIENTES COM AUTOCOMPLETE
-// ===========================================
-
-function initClienteAutocomplete() {
-    const clienteInput = document.getElementById('incluir_cliente');
-    const suggestionsDropdown = document.getElementById('clientes-suggestions');
-    
-    if (!clienteInput || !suggestionsDropdown) {
-        console.log('⚠️ Elementos do autocomplete não encontrados');
-        return;
-    }
-    
-    console.log('✅ Inicializando autocomplete de clientes');
-    
-    // Event listener para digitação
-    clienteInput.addEventListener('input', function(e) {
-        const termo = e.target.value.trim();
-        
-        // Limpa marcação de cliente selecionado quando usuário digita
-        if (clienteInput.dataset.clienteSelecionado === 'true') {
-            handleClienteInputChange();
-        }
-        
-        if (termo.length < 2) {
-            hideSuggestions();
-            return;
-        }
-        
-        // Debounce para evitar muitas requisições
-        clearTimeout(clientesSearchTimeout);
-        clientesSearchTimeout = setTimeout(() => {
-            buscarClientes(termo);
-        }, 300);
-    });
-    
-    // Event listener para teclas de navegação
-    clienteInput.addEventListener('keydown', function(e) {
-        const suggestionsVisible = suggestionsDropdown.classList.contains('show');
-        
-        if (!suggestionsVisible) return;
-        
-        switch(e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                navigateSuggestions(1);
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                navigateSuggestions(-1);
-                break;
-            case 'Enter':
-                e.preventDefault();
-                if (selectedClienteIndex >= 0) {
-                    selectCliente(clientesSuggestions[selectedClienteIndex]);
-                }
-                break;
-            case 'Escape':
-                hideSuggestions();
-                break;
-        }
-    });
-    
-    // Focus para reexibir sugestões se já há texto suficiente
-    clienteInput.addEventListener('focus', function() {
-        const termo = this.value.trim();
-        if (termo.length >= 2 && clientesSuggestions.length > 0) {
-            suggestionsDropdown.classList.add('show');
-        }
-    });
-    
-    // Fechar sugestões ao clicar fora
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.autocomplete-container')) {
-            hideSuggestions();
-        }
-    });
-}
-
-function buscarClientes(termo) {
-    const suggestionsDropdown = document.getElementById('clientes-suggestions');
-    
-    console.log('🔍 Buscando clientes para termo:', termo);
-    
-    // Mostra loading
-    suggestionsDropdown.innerHTML = '<div class="suggestions-loading"><i class="fas fa-spinner fa-spin"></i> Buscando clientes...</div>';
-    suggestionsDropdown.classList.add('show');
-    
-    fetch(`buscar_clientes.php?termo=${encodeURIComponent(termo)}&limit=10`)
-        .then(response => {
-            console.log('📡 Status resposta busca clientes:', response.status);
-            
-            if (!response.ok) {
-                throw new Error('Erro na requisição: ' + response.status);
-            }
-            
-            return response.json();
-        })
-        .then(data => {
-            console.log('✅ Dados clientes recebidos:', data);
-            
-            // Verifica se há erro na resposta
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Se data é um array, usa diretamente, senão usa data.clientes
-            const clientes = Array.isArray(data) ? data : (data.clientes || []);
-            
-            displaySuggestions(clientes);
-        })
-        .catch(error => {
-            console.error('❌ Erro na busca de clientes:', error);
-            suggestionsDropdown.innerHTML = '<div class="suggestions-empty"><i class="fas fa-exclamation-triangle"></i> Erro ao buscar clientes</div>';
-        });
-}
-
-function displaySuggestions(clientes) {
-    const suggestionsDropdown = document.getElementById('clientes-suggestions');
-    clientesSuggestions = clientes;
-    selectedClienteIndex = -1;
-    
-    console.log('🎨 Exibindo sugestões para', clientes.length, 'clientes');
-    
-    if (clientes.length === 0) {
-        suggestionsDropdown.innerHTML = '<div class="suggestions-empty"><i class="fas fa-search"></i> Nenhum cliente encontrado</div>';
-        return;
-    }
-    
-    let html = '';
-    clientes.forEach((cliente, index) => {
-        html += `
-            <div class="suggestion-item" data-index="${index}" onclick="selectClienteByIndex(${index})">
-                <div class="suggestion-nome">${escapeHtml(cliente.nome || 'Nome não informado')}</div>
-                <div class="suggestion-detalhes">
-                    <div class="suggestion-detalhe">
-                        <i class="fas fa-hashtag"></i>
-                        <span>UASG: ${escapeHtml(cliente.uasg || 'N/A')}</span>
-                    </div>
-                    ${cliente.cnpj_formatado ? `
-                    <div class="suggestion-detalhe">
-                        <i class="fas fa-id-card"></i>
-                        <span>CNPJ: ${escapeHtml(cliente.cnpj_formatado)}</span>
-                    </div>
-                    ` : ''}
-                    ${cliente.telefone_formatado ? `
-                    <div class="suggestion-detalhe">
-                        <i class="fas fa-phone"></i>
-                        <span>${escapeHtml(cliente.telefone_formatado)}</span>
-                    </div>
-                    ` : ''}
-                    ${cliente.endereco ? `
-                    <div class="suggestion-detalhe">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>${escapeHtml(cliente.endereco.substring(0, 50))}${cliente.endereco.length > 50 ? '...' : ''}</span>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    });
-    
-    suggestionsDropdown.innerHTML = html;
-    suggestionsDropdown.classList.add('show');
-}
-
-function navigateSuggestions(direction) {
-    const suggestions = document.querySelectorAll('.suggestion-item');
-    if (suggestions.length === 0) return;
-    
-    // Remove highlight anterior
-    suggestions.forEach(item => item.classList.remove('highlighted'));
-    
-    // Calcula novo índice
-    selectedClienteIndex += direction;
-    
-    if (selectedClienteIndex < 0) {
-        selectedClienteIndex = suggestions.length - 1;
-    } else if (selectedClienteIndex >= suggestions.length) {
-        selectedClienteIndex = 0;
-    }
-    
-    // Adiciona highlight
-    if (suggestions[selectedClienteIndex]) {
-        suggestions[selectedClienteIndex].classList.add('highlighted');
-        suggestions[selectedClienteIndex].scrollIntoView({ block: 'nearest' });
-    }
-}
-
-// Função auxiliar para selecionar cliente por índice (usada no onclick)
-function selectClienteByIndex(index) {
-    if (clientesSuggestions[index]) {
-        selectCliente(clientesSuggestions[index]);
-    }
-}
-
-function selectCliente(cliente) {
-    console.log('✅ Cliente selecionado:', cliente);
-    
-    const clienteInput = document.getElementById('incluir_cliente');
-    
-    if (!clienteInput) {
-        console.error('❌ Campo cliente não encontrado');
-        return;
-    }
-    
-    // Preenche o campo com o display formatado do cliente
-    clienteInput.value = cliente.display || `${cliente.nome} (${cliente.uasg})`;
-    
-    // Armazena dados do cliente selecionado como data attributes
-    clienteInput.dataset.clienteNome = cliente.nome || '';
-    clienteInput.dataset.clienteUasg = cliente.uasg || '';
-    clienteInput.dataset.clienteId = cliente.id || '';
-    clienteInput.dataset.clienteCnpj = cliente.cnpj || '';
-    clienteInput.dataset.clienteTelefone = cliente.telefone || '';
-    clienteInput.dataset.clienteEmail = cliente.email || '';
-    clienteInput.dataset.clienteEndereco = cliente.endereco || '';
-    
-    // Marca que um cliente foi selecionado
-    clienteInput.dataset.clienteSelecionado = 'true';
-    
-    hideSuggestions();
-    
-    // Atualiza o resumo se a função existir
-    if (typeof atualizarResumo === 'function') {
-        atualizarResumo();
-    }
-    
-    // Foca no próximo campo
-    const nextField = document.getElementById('incluir_valor');
-    if (nextField) {
-        nextField.focus();
-    }
-    
-    // Mostra confirmação
-    showToast(`Cliente selecionado: ${cliente.nome}`, 'success', 2000);
-    
-    console.log('✅ Campo preenchido com:', clienteInput.value);
-}
-
-function hideSuggestions() {
-    const suggestionsDropdown = document.getElementById('clientes-suggestions');
-    if (suggestionsDropdown) {
-        suggestionsDropdown.classList.remove('show');
-        suggestionsDropdown.innerHTML = '';
-    }
-    selectedClienteIndex = -1;
-    clientesSuggestions = [];
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Função para limpar seleção quando o usuário digita manualmente
-function handleClienteInputChange() {
-    const clienteInput = document.getElementById('incluir_cliente');
-    if (!clienteInput) return;
-    
-    // Se o usuário mudou o valor manualmente, limpa os data attributes
-    const valorAtual = clienteInput.value;
-    const valorSelecionado = clienteInput.dataset.clienteSelecionado === 'true';
-    
-    if (valorSelecionado) {
-        // Verifica se o valor ainda corresponde ao cliente selecionado
-        const nomeEsperado = clienteInput.dataset.clienteNome;
-        const uasgEsperado = clienteInput.dataset.clienteUasg;
-        const displayEsperado = `${nomeEsperado} (${uasgEsperado})`;
-        
-        if (valorAtual !== displayEsperado) {
-            // Usuario mudou o valor, limpa a seleção
-            clearClienteSelection();
-        }
-    }
-}
-
-function clearClienteSelection() {
-    const clienteInput = document.getElementById('incluir_cliente');
-    if (!clienteInput) return;
-    
-    // Remove todos os data attributes relacionados ao cliente
-    delete clienteInput.dataset.clienteNome;
-    delete clienteInput.dataset.clienteUasg;
-    delete clienteInput.dataset.clienteId;
-    delete clienteInput.dataset.clienteCnpj;
-    delete clienteInput.dataset.clienteTelefone;
-    delete clienteInput.dataset.clienteEmail;
-    delete clienteInput.dataset.clienteEndereco;
-    delete clienteInput.dataset.clienteSelecionado;
-    
-    console.log('🧹 Seleção de cliente limpa');
-}
-
-// Função para obter dados do cliente selecionado (para uso no formulário)
-function getSelectedClienteData() {
-    const clienteInput = document.getElementById('incluir_cliente');
-    if (!clienteInput || clienteInput.dataset.clienteSelecionado !== 'true') {
-        return null;
-    }
-    
-    return {
-        id: clienteInput.dataset.clienteId,
-        nome: clienteInput.dataset.clienteNome,
-        uasg: clienteInput.dataset.clienteUasg,
-        cnpj: clienteInput.dataset.clienteCnpj,
-        telefone: clienteInput.dataset.clienteTelefone,
-        email: clienteInput.dataset.clienteEmail,
-        endereco: clienteInput.dataset.clienteEndereco,
-        display: clienteInput.value
-    };
-}
-
-// ===========================================
-// FUNÇÕES DO MODAL DE INCLUSÃO
-// ===========================================
-
-/**
- * Abre o modal de inclusão de nova conta
- */
-window.abrirModalIncluir = function() {
-    console.log('📝 Abrindo modal de inclusão de conta');
-    
-    const modal = document.getElementById('incluirModal');
-    const form = document.getElementById('incluirContaForm');
-    
-    if (!modal || !form) {
-        console.error('❌ Modal ou formulário de inclusão não encontrado');
-        showToast('Erro: Modal não encontrado', 'error');
-        return;
-    }
-    
-    // Limpa o formulário
-    form.reset();
-    
-    // Define data padrão como hoje
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('incluir_data').value = hoje;
-    
-    // Limpa dados do cliente anterior
-    clearClienteSelection();
-    
-    // Mostra o modal
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    
-    // Inicializa o autocomplete após o modal estar visível
-    setTimeout(() => {
-        initClienteAutocomplete();
-        
-        // Foca no primeiro campo
-        document.getElementById('incluir_cliente').focus();
-    }, 300);
-};
-
-/**
- * Fecha o modal de inclusão
- */
-window.fecharModalIncluir = function() {
-    const modal = document.getElementById('incluirModal');
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    
-    // Limpa sugestões de clientes
-    hideSuggestions();
-    
-    // Limpa dados do cliente
-    clearClienteSelection();
-    
-    console.log('✅ Modal de inclusão fechado');
-};
-
-/**
- * Processa a inclusão da nova conta
- */
-function processarInclusaoConta(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    const submitBtn = document.getElementById('salvarIncluirBtn');
-    
-    // Obter dados do cliente selecionado
-    const clienteSelecionado = getSelectedClienteData();
-    
-    // Debug: mostra os dados sendo enviados
-    console.log('📝 Dados da nova conta sendo enviados:');
-    console.log('Cliente selecionado:', clienteSelecionado);
-    
-    // Validações básicas no frontend
-    const clienteInput = document.getElementById('incluir_cliente');
-    const cliente = clienteInput.value.trim();
-    const tipoReceita = formData.get('tipo_receita');
-    const valorTotal = formData.get('valor_total');
-    const dataVencimento = formData.get('data_vencimento');
-    
-    if (!cliente) {
-        showToast('Cliente é obrigatório', 'error');
-        clienteInput.focus();
-        return;
-    }
-    
-    if (!tipoReceita || !tipoReceita.trim()) {
-        showToast('Tipo de Receita é obrigatório', 'error');
-        document.getElementById('incluir_tipo_receita').focus();
-        return;
-    }
-    
-    if (!valorTotal || parseFloat(valorTotal) <= 0) {
-        showToast('Valor Total é obrigatório e deve ser maior que zero', 'error');
-        document.getElementById('incluir_valor').focus();
-        return;
-    }
-    
-    if (!dataVencimento) {
-        showToast('Data de Vencimento é obrigatória', 'error');
-        document.getElementById('incluir_data_vencimento').focus();
-        return;
-    }
-    
-    // Se um cliente foi selecionado da lista, usar os dados separados
-    if (clienteSelecionado) {
-        console.log('✅ Usando dados do cliente selecionado da lista');
-        
-        // Remove o campo cliente original e adiciona os dados separados
-        formData.delete('cliente');
-        formData.append('cliente_nome', clienteSelecionado.nome);
-        formData.append('cliente_uasg', clienteSelecionado.uasg);
-        formData.append('cliente_id', clienteSelecionado.id);
-        
-        // Para compatibilidade, mantém o campo cliente com o nome
-        formData.append('cliente', clienteSelecionado.nome);
-        
-    } else {
-        console.log('⚠️ Cliente digitado manualmente, tentando extrair dados');
-        
-        // Tenta extrair UASG do texto digitado
-        const clienteTexto = cliente;
-        let clienteNome = clienteTexto;
-        let clienteUasg = '';
-        
-        // Verifica se está no formato "NOME (UASG)"
-        const match = clienteTexto.match(/^(.+?)\s*\(([^)]+)\)$/);
-        if (match) {
-            clienteNome = match[1].trim();
-            clienteUasg = match[2].trim();
-        } else {
-            // Procura por números que podem ser UASG
-            const uasgMatch = clienteTexto.match(/(\d{6,})/);
-            if (uasgMatch) {
-                clienteUasg = uasgMatch[1];
-                clienteNome = clienteTexto.replace(uasgMatch[0], '').trim();
-            }
-        }
-        
-        // Atualiza os dados do formulário
-        formData.delete('cliente');
-        formData.append('cliente_nome', clienteNome);
-        formData.append('cliente_uasg', clienteUasg || clienteTexto);
-        formData.append('cliente', clienteNome);
-    }
-    
-    // Debug final dos dados
-    console.log('📝 FormData final:');
-    for (let [key, value] of formData.entries()) {
-        console.log(`${key}: "${value}"`);
-    }
-    
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-    }
-    
-    // Adiciona loading overlay no modal
-    const modalBody = document.querySelector('#incluirModal .modal-body');
-    if (modalBody) {
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'loading-overlay';
-        loadingOverlay.innerHTML = '<div class="spinner"></div>';
-        loadingOverlay.style.cssText = `
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 1000;
-        `;
-        modalBody.style.position = 'relative';
-        modalBody.appendChild(loadingOverlay);
-    }
-    
-    fetch(window.location.href, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        console.log('📡 Status da resposta inclusão:', response.status);
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            return response.text().then(text => {
-                console.error('❌ Resposta não é JSON:', text.substring(0, 500));
-                throw new Error('Resposta do servidor não é JSON válido.');
-            });
-        }
-        
-        return response.json();
-    })
-    .then(data => {
-        console.log('✅ Resposta JSON inclusão:', data);
-        
-        if (data.success) {
-            showToast('Conta incluída com sucesso!', 'success');
-            
-            fecharModalIncluir();
-            
-            // Recarrega a página para mostrar a nova conta
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-            
-        } else {
-            throw new Error(data.error || 'Erro desconhecido ao incluir conta');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Erro ao incluir conta:', error);
-        showToast('Erro ao incluir: ' + error.message, 'error');
-    })
-    .finally(() => {
-        // Remove loading overlay
-        const loadingOverlay = document.querySelector('#incluirModal .loading-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.remove();
-        }
-        
-        // Restaura botão
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Conta a Receber';
-        }
-    });
-}
-
-/**
- * Função para atualizar o resumo
- */
-function atualizarResumo() {
-    const clienteInput = document.getElementById('incluir_cliente');
-    const clienteSelecionado = getSelectedClienteData();
-    
-    let clienteDisplay = '';
-    
-    if (clienteSelecionado) {
-        // Se cliente foi selecionado da lista, usa o nome
-        clienteDisplay = clienteSelecionado.nome;
-    } else {
-        // Se foi digitado manualmente, tenta extrair o nome
-        const cliente = clienteInput.value.trim();
-        if (cliente.includes('(') && cliente.includes(')')) {
-            clienteDisplay = cliente.split('(')[0].trim();
-        } else {
-            clienteDisplay = cliente;
-        }
-    }
-    
-    const valor = document.getElementById('incluir_valor').value;
-    const tipo = document.getElementById('incluir_tipo_receita').value;
-    const vencimento = document.getElementById('incluir_data_vencimento').value;
-    
-    const resumoDiv = document.getElementById('resumoConta');
-    
-    // Mostra o resumo apenas se pelo menos 2 campos estiverem preenchidos
-    const camposPreenchidos = [clienteDisplay, valor, tipo, vencimento].filter(campo => campo && campo.trim()).length;
-    
-    if (camposPreenchidos >= 2) {
-        resumoDiv.style.display = 'block';
-        
-        document.getElementById('resumo-cliente').textContent = clienteDisplay || '-';
-        document.getElementById('resumo-valor').textContent = valor ? `R$ ${parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
-        document.getElementById('resumo-tipo').textContent = tipo || '-';
-        
-        if (vencimento) {
-            const dataVenc = new Date(vencimento);
-            document.getElementById('resumo-vencimento').textContent = dataVenc.toLocaleDateString('pt-BR');
-        } else {
-            document.getElementById('resumo-vencimento').textContent = '-';
-        }
-    } else {
-        resumoDiv.style.display = 'none';
-    }
-}
-
-// ===========================================
-// SISTEMA DE AUTENTICAÇÃO FINANCEIRA
+// FUNÇÕES DO SISTEMA DE AUTENTICAÇÃO FINANCEIRA
 // ===========================================
 
 function openConfirmationModal(selectElement) {
@@ -4278,19 +3571,18 @@ function openConfirmationModal(selectElement) {
     document.getElementById('confirm-valor').textContent = currentContaData.valor;
     document.getElementById('confirm-vencimento').textContent = currentContaData.vencimento;
     
-    // Define data padrão como hoje
+    // NOVO: Define data padrão como hoje
     const hoje = new Date().toISOString().split('T')[0];
     document.getElementById('dataRecebimento').value = hoje;
 
     document.getElementById('confirmationModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     
-    // Foca no campo de data após um breve delay
+    // NOVO: Foca no campo de data após um breve delay
     setTimeout(() => {
         document.getElementById('dataRecebimento').focus();
     }, 300);
 }
-
 window.closeFinancialAuthModal = function() {
     document.getElementById('financialAuthModal').style.display = 'none';
     document.getElementById('financialPassword').value = '';
@@ -4320,7 +3612,7 @@ window.togglePasswordVisibility = function() {
 };
 
 window.requestFinancialAuth = function() {
-    // Validar data de recebimento antes de prosseguir
+    // NOVO: Validar data de recebimento antes de prosseguir
     const dataRecebimento = document.getElementById('dataRecebimento').value;
     
     if (!dataRecebimento) {
@@ -4363,7 +3655,7 @@ window.closeConfirmationModal = function() {
         currentSelectElement.value = 'Não Recebido';
     }
     
-    // Limpar campo de data
+    // NOVO: Limpar campo de data
     document.getElementById('dataRecebimento').value = '';
     
     document.getElementById('confirmationModal').style.display = 'none';
@@ -4421,7 +3713,7 @@ function resetAuthButton() {
 }
 
 function updateStatusWithAuth(id, status, senha) {
-    // Preparar dados incluindo a data de recebimento
+    // NOVO: Preparar dados incluindo a data de recebimento
     const postData = {
         update_status: '1',
         id: id,
@@ -4429,7 +3721,7 @@ function updateStatusWithAuth(id, status, senha) {
         financial_password: senha
     };
     
-    // Adicionar data de recebimento se disponível
+    // NOVO: Adicionar data de recebimento se disponível
     if (currentContaData.dataRecebimento) {
         postData.data_recebimento = currentContaData.dataRecebimento;
     }
@@ -4498,7 +3790,7 @@ function showSuccessMessage(message) {
 }
 
 // ===========================================
-// SISTEMA DE NOTIFICAÇÕES TOAST
+// UTILITÁRIOS
 // ===========================================
 
 /**
@@ -4582,29 +3874,28 @@ function showToast(message, type = 'info', duration = 4000) {
 // ===========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 LicitaSis - Sistema de Contas a Receber carregado');
+    console.log('🚀 LicitaSis - Sistema de Contas a Receber com Edição e Exclusão carregado');
     
-    // Event listener para os selects de status (verificação de permissão inserida via PHP)
-    const statusSelects = document.querySelectorAll('.status-select');
-    if (statusSelects.length > 0) {
-        statusSelects.forEach(select => {
-            select.addEventListener('change', function() {
-                const newStatus = this.value;
-                const previousStatus = this.dataset.previousValue || 'Não Recebido';
-                
-                if (newStatus === 'Recebido' && previousStatus !== 'Recebido') {
-                    openConfirmationModal(this);
-                } else if (newStatus === 'Não Recebido') {
-                    updateStatus(this.dataset.id, newStatus, this);
-                }
-                
-                this.dataset.previousValue = newStatus;
-            });
+    // Event listener para os selects de status (apenas se o usuário tem permissão de edição)
+    <?php if ($permissionManager->hasPagePermission('financeiro', 'edit')): ?>
+    document.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const newStatus = this.value;
+            const previousStatus = this.dataset.previousValue || 'Não Recebido';
             
-            // Inicializa o valor anterior
-            select.dataset.previousValue = select.value;
+            if (newStatus === 'Recebido' && previousStatus !== 'Recebido') {
+                openConfirmationModal(this);
+            } else if (newStatus === 'Não Recebido') {
+                updateStatus(this.dataset.id, newStatus, this);
+            }
+            
+            this.dataset.previousValue = newStatus;
         });
-    }
+        
+        // Inicializa o valor anterior
+        select.dataset.previousValue = select.value;
+    });
+    <?php endif; ?>
 
     // Função para atualizar status diretamente (sem autenticação)
     function updateStatus(id, status, selectElement) {
@@ -4634,12 +3925,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Event listener para o formulário de inclusão
-    const incluirForm = document.getElementById('incluirContaForm');
-    if (incluirForm) {
-        incluirForm.addEventListener('submit', processarInclusaoConta);
-    }
-    
+    // JavaScript específico para o modal de inclusão
+document.addEventListener('DOMContentLoaded', function() {
     // Adiciona listeners para atualizar resumo em tempo real
     const camposResumo = ['incluir_cliente', 'incluir_valor', 'incluir_tipo_receita', 'incluir_data_vencimento'];
     
@@ -4651,6 +3938,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    function atualizarResumo() {
+    const clienteInput = document.getElementById('incluir_cliente');
+    const cliente = clienteInput.value;
+    const valor = document.getElementById('incluir_valor').value;
+    const tipo = document.getElementById('incluir_tipo_receita').value;
+    const vencimento = document.getElementById('incluir_data_vencimento').value;
+    
+    const resumoDiv = document.getElementById('resumoConta');
+    
+    // Mostra o resumo apenas se pelo menos 2 campos estiverem preenchidos
+    const camposPreenchidos = [cliente, valor, tipo, vencimento].filter(campo => campo && campo.trim()).length;
+    
+    if (camposPreenchidos >= 2) {
+        resumoDiv.style.display = 'block';
+        
+        // Extrair apenas o nome para exibição (remover UASG do display)
+        let clienteDisplay = cliente;
+        if (cliente.includes('(') && cliente.includes(')')) {
+            clienteDisplay = cliente.split('(')[0].trim();
+        }
+        
+        document.getElementById('resumo-cliente').textContent = clienteDisplay || '-';
+        document.getElementById('resumo-valor').textContent = valor ? `R$ ${parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+        document.getElementById('resumo-tipo').textContent = tipo || '-';
+        
+        if (vencimento) {
+            const dataVenc = new Date(vencimento);
+            document.getElementById('resumo-vencimento').textContent = dataVenc.toLocaleDateString('pt-BR');
+        } else {
+            document.getElementById('resumo-vencimento').textContent = '-';
+        }
+    } else {
+        resumoDiv.style.display = 'none';
+    }
+}
+    
     // Formatação automática do valor
     const campoValor = document.getElementById('incluir_valor');
     if (campoValor) {
@@ -4661,7 +3984,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Validação de data de vencimento
+    // Validação de data de vencimento (não pode ser anterior a hoje)
     const campoVencimento = document.getElementById('incluir_data_vencimento');
     if (campoVencimento) {
         campoVencimento.addEventListener('change', function() {
@@ -4676,6 +3999,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 );
                 
                 if (!confirmar) {
+                    // Sugere data para 30 dias a partir de hoje
                     const sugestao = new Date();
                     sugestao.setDate(sugestao.getDate() + 30);
                     this.value = sugestao.toISOString().split('T')[0];
@@ -4683,23 +4007,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
 
     // Enter para confirmar senha no modal de autenticação
-    const financialPassword = document.getElementById('financialPassword');
-    if (financialPassword) {
-        financialPassword.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                confirmFinancialAuth();
-            }
-        });
-    }
+    document.getElementById('financialPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            confirmFinancialAuth();
+        }
+    });
 
     // Fecha modais ao clicar fora
     window.onclick = function(event) {
         const modal = document.getElementById("editModal");
         const confirmModal = document.getElementById("confirmationModal");
         const authModal = document.getElementById("financialAuthModal");
-        const incluirModal = document.getElementById('incluirModal');
         
         if (event.target === modal) {
             closeModal();
@@ -4709,9 +4030,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (event.target === authModal) {
             closeFinancialAuthModal();
-        }
-        if (event.target === incluirModal) {
-            fecharModalIncluir();
         }
     };
 
@@ -4725,9 +4043,184 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             closeConfirmationModal();
             closeFinancialAuthModal();
+        }
+    });
+
+    // ===========================================
+// FUNÇÕES DO MODAL DE INCLUSÃO
+// ===========================================
+
+/**
+ * Abre o modal de inclusão de nova conta
+ */
+window.abrirModalIncluir = function() {
+    console.log('📝 Abrindo modal de inclusão de conta');
+    
+    const modal = document.getElementById('incluirModal');
+    const form = document.getElementById('incluirContaForm');
+    
+    if (!modal || !form) {
+        console.error('❌ Modal ou formulário de inclusão não encontrado');
+        showToast('Erro: Modal não encontrado', 'error');
+        return;
+    }
+    
+    // Limpa o formulário
+    form.reset();
+    
+    // Define data padrão como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('incluir_data').value = hoje;
+    
+    // Mostra o modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Foca no primeiro campo
+    setTimeout(() => {
+        document.getElementById('incluir_cliente').focus();
+    }, 300);
+};
+
+/**
+ * Fecha o modal de inclusão
+ */
+window.fecharModalIncluir = function() {
+    const modal = document.getElementById('incluirModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    
+    // Limpa sugestões de clientes
+    hideSuggestions();
+    
+    console.log('✅ Modal de inclusão fechado');
+};
+
+/**
+ * Processa a inclusão da nova conta
+ */
+function processarInclusaoConta(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('salvarIncluirBtn');
+    
+    // Debug: mostra os dados sendo enviados
+    console.log('📝 Dados da nova conta sendo enviados:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: "${value}"`);
+    }
+    
+    // Validações básicas no frontend
+    const cliente = formData.get('cliente');
+    const tipoReceita = formData.get('tipo_receita');
+    const valorTotal = formData.get('valor_total');
+    const dataVencimento = formData.get('data_vencimento');
+    
+    if (!cliente || !cliente.trim()) {
+        showToast('Cliente é obrigatório', 'error');
+        return;
+    }
+    
+    if (!tipoReceita || !tipoReceita.trim()) {
+        showToast('Tipo de Receita é obrigatório', 'error');
+        return;
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
+    
+    // Adiciona loading overlay no modal
+    const modalBody = document.querySelector('#incluirModal .modal-body');
+    if (modalBody) {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = '<div class="spinner"></div>';
+        modalBody.style.position = 'relative';
+        modalBody.appendChild(loadingOverlay);
+    }
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('📡 Status da resposta inclusão:', response.status);
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            return response.text().then(text => {
+                console.error('❌ Resposta não é JSON:', text.substring(0, 500));
+                throw new Error('Resposta do servidor não é JSON válido.');
+            });
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Resposta JSON inclusão:', data);
+        
+        if (data.success) {
+            showToast('Conta incluída com sucesso!', 'success');
+            
+            fecharModalIncluir();
+            
+            // Recarrega a página para mostrar a nova conta
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } else {
+            throw new Error(data.error || 'Erro desconhecido ao incluir conta');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro ao incluir conta:', error);
+        showToast('Erro ao incluir: ' + error.message, 'error');
+    })
+    .finally(() => {
+        // Remove loading overlay
+        const loadingOverlay = document.querySelector('#incluirModal .loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.remove();
+        }
+        
+        // Restaura botão
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Conta';
+        }
+    });
+}
+
+// Event listener para o formulário de inclusão
+document.addEventListener('DOMContentLoaded', function() {
+    const incluirForm = document.getElementById('incluirContaForm');
+    if (incluirForm) {
+        incluirForm.addEventListener('submit', processarInclusaoConta);
+    }
+    
+    // Fecha modal de inclusão com ESC
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
             fecharModalIncluir();
         }
     });
+    
+    // Fecha modal ao clicar fora
+    window.onclick = function(event) {
+        const incluirModal = document.getElementById('incluirModal');
+        if (event.target === incluirModal) {
+            fecharModalIncluir();
+        }
+    };
+});
 
     // Auto-foco na pesquisa
     const searchInput = document.querySelector('.search-input');
@@ -4747,6 +4240,218 @@ document.addEventListener('DOMContentLoaded', function() {
         }, index * 50);
     });
 
+    // ===========================================
+// SISTEMA DE BUSCA DE CLIENTES COM AUTOCOMPLETE
+// ===========================================
+
+let clientesSearchTimeout;
+let selectedClienteIndex = -1;
+let clientesSuggestions = [];
+
+function initClienteAutocomplete() {
+    const clienteInput = document.getElementById('incluir_cliente');
+    const suggestionsDropdown = document.getElementById('clientes-suggestions');
+    
+    if (!clienteInput || !suggestionsDropdown) return;
+    
+    // Event listener para digitação
+    clienteInput.addEventListener('input', function(e) {
+        const termo = e.target.value.trim();
+        
+        if (termo.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        
+        // Debounce para evitar muitas requisições
+        clearTimeout(clientesSearchTimeout);
+        clientesSearchTimeout = setTimeout(() => {
+            buscarClientes(termo);
+        }, 300);
+    });
+    
+    // Event listener para teclas de navegação
+    clienteInput.addEventListener('keydown', function(e) {
+        const suggestionsVisible = suggestionsDropdown.classList.contains('show');
+        
+        if (!suggestionsVisible) return;
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                navigateSuggestions(1);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                navigateSuggestions(-1);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedClienteIndex >= 0) {
+                    selectCliente(clientesSuggestions[selectedClienteIndex]);
+                }
+                break;
+            case 'Escape':
+                hideSuggestions();
+                break;
+        }
+    });
+    
+    // Fechar sugestões ao clicar fora
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-container')) {
+            hideSuggestions();
+        }
+    });
+}
+
+function buscarClientes(termo) {
+    const suggestionsDropdown = document.getElementById('clientes-suggestions');
+    
+    // Mostra loading
+    suggestionsDropdown.innerHTML = '<div class="suggestions-loading"><i class="fas fa-spinner fa-spin"></i> Buscando clientes...</div>';
+    suggestionsDropdown.classList.add('show');
+    
+    fetch(`buscar_clientes.php?termo=${encodeURIComponent(termo)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na requisição');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            displaySuggestions(data);
+        })
+        .catch(error => {
+            console.error('Erro na busca de clientes:', error);
+            suggestionsDropdown.innerHTML = '<div class="suggestions-empty"><i class="fas fa-exclamation-triangle"></i> Erro ao buscar clientes</div>';
+        });
+}
+
+function displaySuggestions(clientes) {
+    const suggestionsDropdown = document.getElementById('clientes-suggestions');
+    clientesSuggestions = clientes;
+    selectedClienteIndex = -1;
+    
+    if (clientes.length === 0) {
+        suggestionsDropdown.innerHTML = '<div class="suggestions-empty"><i class="fas fa-search"></i> Nenhum cliente encontrado</div>';
+        return;
+    }
+    
+    let html = '';
+    clientes.forEach((cliente, index) => {
+        html += `
+            <div class="suggestion-item" data-index="${index}" onclick="selectCliente(clientesSuggestions[${index}])">
+                <div class="suggestion-nome">${escapeHtml(cliente.nome)}</div>
+                <div class="suggestion-detalhes">
+                    <div class="suggestion-detalhe">
+                        <i class="fas fa-hashtag"></i>
+                        <span>UASG: ${escapeHtml(cliente.uasg)}</span>
+                    </div>
+                    ${cliente.cnpj ? `
+                    <div class="suggestion-detalhe">
+                        <i class="fas fa-id-card"></i>
+                        <span>CNPJ: ${formatCNPJ(cliente.cnpj)}</span>
+                    </div>
+                    ` : ''}
+                    ${cliente.telefone ? `
+                    <div class="suggestion-detalhe">
+                        <i class="fas fa-phone"></i>
+                        <span>${escapeHtml(cliente.telefone)}</span>
+                    </div>
+                    ` : ''}
+                    ${cliente.endereco ? `
+                    <div class="suggestion-detalhe">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${escapeHtml(cliente.endereco)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    suggestionsDropdown.innerHTML = html;
+    suggestionsDropdown.classList.add('show');
+}
+
+function navigateSuggestions(direction) {
+    const suggestions = document.querySelectorAll('.suggestion-item');
+    if (suggestions.length === 0) return;
+    
+    // Remove highlight anterior
+    suggestions.forEach(item => item.classList.remove('highlighted'));
+    
+    // Calcula novo índice
+    selectedClienteIndex += direction;
+    
+    if (selectedClienteIndex < 0) {
+        selectedClienteIndex = suggestions.length - 1;
+    } else if (selectedClienteIndex >= suggestions.length) {
+        selectedClienteIndex = 0;
+    }
+    
+    // Adiciona highlight
+    suggestions[selectedClienteIndex].classList.add('highlighted');
+    suggestions[selectedClienteIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function selectCliente(cliente) {
+    const clienteInput = document.getElementById('incluir_cliente');
+    
+    // Preenche o campo com o display formatado do cliente
+    clienteInput.value = cliente.display; // Ex: "AMAZONAS ENERGIA S.A (123456)"
+    
+    // Armazena dados do cliente selecionado para envio no formulário
+    clienteInput.dataset.clienteNome = cliente.nome;
+    clienteInput.dataset.clienteUasg = cliente.uasg;
+    clienteInput.dataset.clienteId = cliente.id;
+    
+    hideSuggestions();
+    
+    // Atualiza o resumo se a função existir
+    if (typeof atualizarResumo === 'function') {
+        atualizarResumo();
+    }
+    
+    // Foca no próximo campo
+    const nextField = document.getElementById('incluir_valor');
+    if (nextField) {
+        nextField.focus();
+    }
+    
+    // Mostra confirmação
+    showToast(`Cliente selecionado: ${cliente.nome}`, 'success');
+}
+
+function hideSuggestions() {
+    const suggestionsDropdown = document.getElementById('clientes-suggestions');
+    suggestionsDropdown.classList.remove('show');
+    selectedClienteIndex = -1;
+    clientesSuggestions = [];
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Inicializar quando o modal for aberto
+const originalAbrirModalIncluir = window.abrirModalIncluir;
+window.abrirModalIncluir = function() {
+    originalAbrirModalIncluir();
+    
+    // Inicializa o autocomplete após o modal estar visível
+    setTimeout(() => {
+        initClienteAutocomplete();
+    }, 100);
+};
+
     // Torna as funções disponíveis globalmente
     window.editarVenda = editarVenda;
     window.cancelarEdicao = cancelarEdicao;
@@ -4754,13 +4459,8 @@ document.addEventListener('DOMContentLoaded', function() {
     window.confirmarExclusaoEdicao = confirmarExclusaoEdicao;
     window.imprimirVenda = imprimirVenda;
     window.showToast = showToast;
-    window.selectClienteByIndex = selectClienteByIndex;
-    window.selectCliente = selectCliente;
-    window.getSelectedClienteData = getSelectedClienteData;
-    window.clearClienteSelection = clearClienteSelection;
-    window.hideSuggestions = hideSuggestions;
     
-    console.log('✅ Sistema de Contas a Receber carregado com sucesso!');
+    console.log('✅ Sistema de Contas a Receber com funcionalidades de edição carregado com sucesso!');
 });
 
 // Cleanup quando a página é descarregada
@@ -4772,7 +4472,7 @@ window.addEventListener('beforeunload', function(event) {
     }
 });
 
-console.log('🎉 Sistema LicitaSis - Contas a Receber v2.0 COMPLETO carregado com sucesso!');
+console.log('🎉 Sistema LicitaSis - Contas a Receber v2.0 ATUALIZADO com Edição e Exclusão carregado com sucesso!');
 </script>
 
 <!-- Adiciona animações CSS dinamicamente -->

@@ -17,6 +17,9 @@ $permissionManager = initPermissions($pdo);
 // Verifica se o usuário tem permissão para acessar vendas
 $permissionManager->requirePermission('vendas', 'view');
 
+// Verifica permissão para deletar (será usada no template)
+$canDelete = $permissionManager->hasPagePermission('vendas', 'delete');
+
 // Registra acesso à página
 logUserAction('READ', 'vendas_cliente_detalhes');
 
@@ -1279,6 +1282,44 @@ renderHeader("Vendas do Cliente - LicitaSis", "vendas");
             border-radius: 0;
         }
     }
+
+    /* Botões de ação em sequência */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-sm.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #c82333 100%);
+}
+
+.btn-sm.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, var(--danger-color) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Modal de confirmação personalizado */
+.confirm-modal {
+    background: rgba(0,0,0,0.7);
+}
+
+.confirm-modal .modal-content {
+    max-width: 500px;
+    text-align: center;
+}
+
+.confirm-modal .modal-header {
+    background: linear-gradient(135deg, var(--danger-color), #c82333);
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
 </style>
 
 <div class="container">
@@ -1391,8 +1432,8 @@ renderHeader("Vendas do Cliente - LicitaSis", "vendas");
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($vendas as $venda): ?>
-                                <tr>
+<?php foreach ($vendas as $venda): ?>
+    <tr data-venda-id="<?php echo $venda['venda_id']; ?>">                                <tr>
                                     <td>
                                         <span class="nf-clickable" onclick="openVendaModal(<?php echo $venda['venda_id']; ?>)">
                                             <?php 
@@ -1439,11 +1480,19 @@ renderHeader("Vendas do Cliente - LicitaSis", "vendas");
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <button onclick="openVendaModal(<?php echo $venda['venda_id']; ?>)" 
-                                               class="btn btn-sm btn-info" title="Ver detalhes">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </td>
+    <div class="action-buttons">
+        <button onclick="openVendaModal(<?php echo $venda['venda_id']; ?>)" 
+               class="btn btn-sm btn-info" title="Ver detalhes">
+            <i class="fas fa-eye"></i>
+        </button>
+        <?php if ($canDelete): ?>
+            <button onclick="confirmDeleteVenda(<?php echo $venda['venda_id']; ?>, '<?php echo safe_htmlspecialchars($venda['numero_nf'] ?? 'Sem NF'); ?>')" 
+                   class="btn btn-sm btn-danger" title="Excluir venda">
+                <i class="fas fa-trash"></i>
+            </button>
+        <?php endif; ?>
+    </div>
+</td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -1657,6 +1706,11 @@ function buildModalActions() {
                 <button onclick="toggleEditMode()" class="btn btn-warning">
                     <i class="fas fa-edit"></i> ${editMode ? 'Cancelar Edição' : 'Editar'}
                 </button>
+                <?php if ($canDelete): ?>
+                    <button onclick="confirmDeleteVendaFromModal()" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Excluir Venda
+                    </button>
+                <?php endif; ?>
             </div>
             <div class="modal-actions-right">
                 ${editMode ? `
@@ -1664,7 +1718,7 @@ function buildModalActions() {
                         <i class="fas fa-save"></i> Salvar
                     </button>
                 ` : ''}
-                <button onclick="closeVendaModal()" class="btn btn-danger">
+                <button onclick="closeVendaModal()" class="btn btn-info">
                     <i class="fas fa-times"></i> Fechar
                 </button>
             </div>
@@ -1852,6 +1906,185 @@ function animateNumber(element, finalNumber) {
         }
         element.textContent = currentNumber.toLocaleString('pt-BR');
     }, stepTime);
+}
+
+// Função para confirmar exclusão da venda
+function confirmDeleteVenda(vendaId, nfNumber) {
+    if (confirm(`Tem certeza que deseja excluir a venda ${nfNumber}?\n\nEsta ação não pode ser desfeita e removerá também todos os produtos associados.`)) {
+        deleteVenda(vendaId);
+    }
+}
+
+// Função para confirmar exclusão do modal
+function confirmDeleteVendaFromModal() {
+    const venda = vendasData.find(v => v.venda_id == currentVendaId);
+    const nfNumber = venda ? (venda.numero_nf || 'Sem NF') : 'N/A';
+    
+    if (confirm(`Tem certeza que deseja excluir a venda ${nfNumber}?\n\nEsta ação não pode ser desfeita e removerá também todos os produtos associados.`)) {
+        deleteVenda(currentVendaId);
+    }
+}
+
+// Função para deletar venda
+// Função para deletar venda
+async function deleteVenda(vendaId) {
+    console.log('🚀 Iniciando deleteVenda para ID:', vendaId); // DEBUG
+    
+    try {
+        const formData = new FormData();
+        formData.append('venda_id', vendaId);
+        formData.append('action', 'delete');
+
+        console.log('📤 Enviando dados:', {
+            venda_id: formData.get('venda_id'),
+            action: formData.get('action')
+        }); // DEBUG
+
+        const response = await fetch('delete_venda.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        console.log('📡 Response status:', response.status); // DEBUG
+        console.log('📡 Response ok:', response.ok); // DEBUG
+
+        const result = await response.json();
+        console.log('📥 Response data:', result); // DEBUG
+        
+        if (result.success) {
+            showNotification('Venda excluída com sucesso!', 'success');
+            
+            // Remove a venda do array de dados
+            const vendaIndex = vendasData.findIndex(v => v.venda_id == vendaId);
+            console.log('🔍 Venda index found:', vendaIndex); // DEBUG
+            
+            if (vendaIndex !== -1) {
+                vendasData.splice(vendaIndex, 1);
+                console.log('✂️ Venda removida do array'); // DEBUG
+            }
+            
+            // Remove a linha da tabela
+            const tableRow = document.querySelector(`tr[data-venda-id="${vendaId}"]`);
+            console.log('🎯 Table row found:', tableRow); // DEBUG
+            
+            if (tableRow) {
+                tableRow.remove();
+                console.log('🗑️ Row removed from table'); // DEBUG
+            } else {
+                console.error('❌ Row not found in table!'); // DEBUG
+            }
+            
+            // Atualiza as estatísticas
+            updateStatistics();
+            
+            // Fecha o modal se estiver aberto
+            if (currentVendaId == vendaId) {
+                closeVendaModal();
+            }
+            
+            // Se não há mais vendas, mostra o estado vazio
+            if (vendasData.length === 0) {
+                console.log('🔄 Reloading page - no more vendas'); // DEBUG
+                location.reload();
+            }
+            
+        } else {
+            throw new Error(result.message || 'Erro ao excluir venda');
+        }
+    } catch (error) {
+        console.error('❌ Erro completo:', error); // DEBUG
+        showNotification(error.message, 'error');
+    }
+}
+
+// Função para filtrar tabela
+function filterTable() {
+    const statusFilter = document.getElementById('filterStatus').value;
+    const dateFilter = document.getElementById('filterDate').value;
+    const searchFilter = document.getElementById('searchInput').value.toLowerCase();
+    
+    const table = document.getElementById('vendasTable');
+    if (!table) return;
+    
+    const tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    
+    const rows = tbody.getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        let showRow = true;
+        
+        // Filtro por status
+        if (statusFilter && showRow) {
+            const statusCell = row.cells[4]; // Coluna de status
+            if (statusCell && !statusCell.textContent.includes(statusFilter)) {
+                showRow = false;
+            }
+        }
+        
+        // Filtro por data
+        if (dateFilter && showRow) {
+            const dateCell = row.cells[3]; // Coluna de data
+            if (dateCell) {
+                const cellDate = dateCell.textContent.trim();
+                // Converte data de DD/MM/YYYY para YYYY-MM para comparar com input month
+                const dateParts = cellDate.split('/');
+                if (dateParts.length === 3) {
+                    const monthYear = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}`;
+                    if (monthYear !== dateFilter) {
+                        showRow = false;
+                    }
+                }
+            }
+        }
+        
+        // Filtro por busca
+        if (searchFilter && showRow) {
+            const rowText = row.textContent.toLowerCase();
+            if (!rowText.includes(searchFilter)) {
+                showRow = false;
+            }
+        }
+        
+        // Aplica o filtro
+        row.style.display = showRow ? '' : 'none';
+    }
+}
+
+// Função para atualizar estatísticas após exclusão
+function updateStatistics() {
+    let totalVendas = vendasData.length;
+    let valorTotalVendas = 0;
+    let lucroTotal = 0;
+    let vendasPendentes = 0;
+    let vendasRecebidas = 0;
+    
+    vendasData.forEach(venda => {
+        valorTotalVendas += parseFloat(venda.valor_total || 0);
+        lucroTotal += parseFloat(venda.lucro_produto || 0);
+        
+        if (venda.status_pagamento === 'Recebido') {
+            vendasRecebidas++;
+        } else {
+            vendasPendentes++;
+        }
+    });
+    
+    // Atualiza os elementos na página
+    const totalVendasEl = document.getElementById('totalVendas');
+    if (totalVendasEl) {
+        totalVendasEl.textContent = totalVendas;
+    }
+    
+    // Atualiza outros elementos estatísticos se necessário
+    const statNumbers = document.querySelectorAll('.stat-number');
+    if (statNumbers.length >= 5) {
+        statNumbers[1].textContent = `R$ ${valorTotalVendas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        statNumbers[2].textContent = `R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        statNumbers[3].textContent = vendasPendentes;
+        statNumbers[4].textContent = vendasRecebidas;
+    }
 }
 </script>
 </html>

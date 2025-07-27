@@ -52,85 +52,51 @@ $permissionManager->requirePermission('clientes', 'view');
 $error = "";
 $success = "";
 $clientes = [];
-$searchTerm = "";
+$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
 $totalClientes = 0;
 $clientesPorPagina = 20;
-$paginaAtual = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$paginaAtual = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
 $offset = ($paginaAtual - 1) * $clientesPorPagina;
 
-// NOVOS PARÂMETROS DE ORDENAÇÃO E FILTROS
-$orderBy = isset($_GET['order_by']) ? $_GET['order_by'] : 'nome_orgaos';
-$orderDir = isset($_GET['order_dir']) && $_GET['order_dir'] === 'desc' ? 'DESC' : 'ASC';
+// PARÂMETROS DE ORDENAÇÃO E FILTROS EXPANDIDOS
+$orderBy = isset($_GET['ordenar']) ? $_GET['ordenar'] : 'nome_orgaos';
+$orderDir = isset($_GET['direcao']) && $_GET['direcao'] === 'desc' ? 'DESC' : 'ASC';
 $filterCnpj = isset($_GET['filter_cnpj']) ? trim($_GET['filter_cnpj']) : '';
+$filterCpf = isset($_GET['filter_cpf']) ? trim($_GET['filter_cpf']) : '';
+$filterNomePessoa = isset($_GET['filter_nome_pessoa']) ? trim($_GET['filter_nome_pessoa']) : '';
 $filterEmail = isset($_GET['filter_email']) ? trim($_GET['filter_email']) : '';
 $filterDate = isset($_GET['filter_date']) ? $_GET['filter_date'] : '';
 
-// Campos permitidos para ordenação
-$allowedOrderFields = ['id', 'uasg', 'nome_orgaos', 'cnpj', 'email', 'telefone', 'endereco', 'created_at', 'updated_at'];
+// Campos permitidos para ordenação expandidos
+$allowedOrderFields = ['id', 'uasg', 'nome_orgaos', 'nome_pessoa', 'cnpj', 'cpf', 'rg', 'tipo_pessoa', 'email', 'telefone', 'created_at', 'nome_principal', 'documento_principal'];
 if (!in_array($orderBy, $allowedOrderFields)) {
     $orderBy = 'nome_orgaos';
-}
-
-// Processa exclusão de cliente
-if (isset($_GET['delete_client_id']) && $permissionManager->hasPagePermission('clientes', 'delete')) {
-    $id = (int)$_GET['delete_client_id'];
-    try {
-        // Verifica se o cliente tem vendas ou empenhos associados
-        $checkSql = "SELECT 
-                        (SELECT COUNT(*) FROM vendas WHERE cliente_uasg = (SELECT uasg FROM clientes WHERE id = :id)) as vendas,
-                        (SELECT COUNT(*) FROM empenhos WHERE cliente_uasg = (SELECT uasg FROM clientes WHERE id = :id)) as empenhos";
-        $checkStmt = $pdo->prepare($checkSql);
-        $checkStmt->bindParam(':id', $id);
-        $checkStmt->execute();
-        $dependencies = $checkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($dependencies['vendas'] > 0 || $dependencies['empenhos'] > 0) {
-            $error = "Não é possível excluir este cliente pois existem vendas ou empenhos associados.";
-        } else {
-            // Busca dados do cliente para auditoria
-            $clienteStmt = $pdo->prepare("SELECT * FROM clientes WHERE id = :id");
-            $clienteStmt->bindParam(':id', $id);
-            $clienteStmt->execute();
-            $clienteData = $clienteStmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($clienteData) {
-                // Exclui o cliente
-                $sql = "DELETE FROM clientes WHERE id = :id";
-                $stmt = $pdo->prepare($sql);
-                $stmt->bindParam(':id', $id);
-                $stmt->execute();
-                
-                // Registra auditoria
-                logAudit($pdo, $_SESSION['user']['id'], 'DELETE', 'clientes', $id, null, $clienteData);
-                
-                $success = "Cliente excluído com sucesso!";
-                header("Location: consultar_clientes.php?success=" . urlencode($success));
-                exit();
-            } else {
-                $error = "Cliente não encontrado.";
-            }
-        }
-    } catch (PDOException $e) {
-        $error = "Erro ao excluir o cliente: " . $e->getMessage();
-        error_log("Erro ao excluir cliente ID $id: " . $e->getMessage());
-    }
 }
 
 // Processa atualização de cliente
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client']) && $permissionManager->hasPagePermission('clientes', 'edit')) {
     $id = (int)$_POST['id'];
+    $tipo_pessoa = trim($_POST['tipo_pessoa']);
     $uasg = trim($_POST['uasg']);
-    $cnpj = trim($_POST['cnpj']);
-    $nome_orgaos = trim($_POST['nome_orgaos']);
+    $cnpj = trim($_POST['cnpj'] ?? '');
+    $cpf = trim($_POST['cpf'] ?? '');
+    $rg = trim($_POST['rg'] ?? '');
+    $nome_orgaos = trim($_POST['nome_orgaos'] ?? '');
+    $nome_pessoa = trim($_POST['nome_pessoa'] ?? '');
     $endereco = trim($_POST['endereco']);
-    $telefones = array_filter($_POST['telefone'], 'trim'); // Remove telefones vazios
-    $telefone = implode('/', $telefones);
-    $email = trim($_POST['email']);
+    $telefone = trim($_POST['telefone'] ?? '');
+    $telefone2 = trim($_POST['telefone2'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $email2 = trim($_POST['email2'] ?? '');
     $observacoes = trim($_POST['observacoes']);
 
     // Validações
-    if (empty($uasg) || empty($nome_orgaos)) {
-        $error = "UASG e Nome do Órgão são campos obrigatórios.";
+    if (empty($uasg)) {
+        $error = "UASG é campo obrigatório.";
+    } elseif ($tipo_pessoa === 'PJ' && empty($nome_orgaos)) {
+        $error = "Nome do Órgão é obrigatório para Pessoa Jurídica.";
+    } elseif ($tipo_pessoa === 'PF' && empty($nome_pessoa)) {
+        $error = "Nome da Pessoa é obrigatório para Pessoa Física.";
     } else {
         try {
             // Verifica se já existe outro cliente com mesmo UASG
@@ -150,23 +116,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client']) && $p
                 
                 // Atualiza o cliente
                 $sql = "UPDATE clientes SET 
+                        tipo_pessoa = :tipo_pessoa,
                         uasg = :uasg, 
-                        cnpj = :cnpj, 
-                        nome_orgaos = :nome_orgaos, 
+                        cnpj = :cnpj,
+                        cpf = :cpf,
+                        rg = :rg,
+                        nome_orgaos = :nome_orgaos,
+                        nome_pessoa = :nome_pessoa,
                         endereco = :endereco, 
-                        telefone = :telefone, 
-                        email = :email, 
+                        telefone = :telefone,
+                        telefone2 = :telefone2,
+                        email = :email,
+                        email2 = :email2,
                         observacoes = :observacoes,
                         updated_at = NOW()
                         WHERE id = :id";
                 
                 $stmt = $pdo->prepare($sql);
+                $stmt->bindParam(':tipo_pessoa', $tipo_pessoa);
                 $stmt->bindParam(':uasg', $uasg);
-                $stmt->bindParam(':cnpj', $cnpj);
-                $stmt->bindParam(':nome_orgaos', $nome_orgaos);
+                $stmt->bindParam(':cnpj', $tipo_pessoa === 'PJ' ? $cnpj : null);
+                $stmt->bindParam(':cpf', $tipo_pessoa === 'PF' ? $cpf : null);
+                $stmt->bindParam(':rg', $tipo_pessoa === 'PF' ? $rg : null);
+                $stmt->bindParam(':nome_orgaos', $tipo_pessoa === 'PJ' ? $nome_orgaos : null);
+                $stmt->bindParam(':nome_pessoa', $tipo_pessoa === 'PF' ? $nome_pessoa : null);
                 $stmt->bindParam(':endereco', $endereco);
                 $stmt->bindParam(':telefone', $telefone);
+                $stmt->bindParam(':telefone2', $telefone2);
                 $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':email2', $email2);
                 $stmt->bindParam(':observacoes', $observacoes);
                 $stmt->bindParam(':id', $id);
                 $stmt->execute();
@@ -191,20 +169,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_client']) && $p
     }
 }
 
-// NOVA LÓGICA DE BUSCA E FILTROS
+// LÓGICA DE BUSCA E FILTROS EXPANDIDA
 try {
     $whereConditions = [];
     $params = [];
     
     // Busca geral
-    if (isset($_GET['search']) && !empty(trim($_GET['search']))) {
-        $searchTerm = trim($_GET['search']);
+    if (!empty($searchTerm)) {
         $whereConditions[] = "(nome_orgaos LIKE :searchTerm 
+                             OR nome_pessoa LIKE :searchTerm
                              OR uasg LIKE :searchTerm 
                              OR cnpj LIKE :searchTerm 
+                             OR cpf LIKE :searchTerm
                              OR email LIKE :searchTerm 
+                             OR email2 LIKE :searchTerm
                              OR endereco LIKE :searchTerm 
-                             OR telefone LIKE :searchTerm)";
+                             OR telefone LIKE :searchTerm
+                             OR telefone2 LIKE :searchTerm)";
         $params[':searchTerm'] = "%$searchTerm%";
     }
     
@@ -214,9 +195,21 @@ try {
         $params[':filterCnpj'] = "%$filterCnpj%";
     }
     
+    // Filtro por CPF
+    if (!empty($filterCpf)) {
+        $whereConditions[] = "cpf LIKE :filterCpf";
+        $params[':filterCpf'] = "%$filterCpf%";
+    }
+    
+    // Filtro por Nome da Pessoa
+    if (!empty($filterNomePessoa)) {
+        $whereConditions[] = "nome_pessoa LIKE :filterNomePessoa";
+        $params[':filterNomePessoa'] = "%$filterNomePessoa%";
+    }
+    
     // Filtro por E-mail
     if (!empty($filterEmail)) {
-        $whereConditions[] = "email LIKE :filterEmail";
+        $whereConditions[] = "(email LIKE :filterEmail OR email2 LIKE :filterEmail)";
         $params[':filterEmail'] = "%$filterEmail%";
     }
     
@@ -243,11 +236,25 @@ try {
     // Conta total de resultados
     $countSql = "SELECT COUNT(*) as total FROM clientes $whereClause";
     $countStmt = $pdo->prepare($countSql);
-    $countStmt->execute($params);
-    $totalClientes = $countStmt->fetch()['total'];
+    foreach ($params as $key => $value) {
+        $countStmt->bindValue($key, $value);
+    }
+    $countStmt->execute();
+    $totalClientes = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $totalPaginas = ceil($totalClientes / $clientesPorPagina);
     
     // Busca clientes com paginação e ordenação
-    $sql = "SELECT * FROM clientes $whereClause 
+    $sql = "SELECT id, tipo_pessoa, uasg, cnpj, cpf, rg, nome_orgaos, nome_pessoa, 
+            telefone, telefone2, email, email2, endereco, observacoes, created_at, updated_at,
+            CASE 
+                WHEN tipo_pessoa = 'PF' THEN nome_pessoa 
+                ELSE nome_orgaos 
+            END as nome_principal,
+            CASE 
+                WHEN tipo_pessoa = 'PF' THEN cpf 
+                ELSE cnpj 
+            END as documento_principal
+            FROM clientes $whereClause 
             ORDER BY $orderBy $orderDir 
             LIMIT :limit OFFSET :offset";
     $stmt = $pdo->prepare($sql);
@@ -268,7 +275,116 @@ try {
 // Calcula informações de paginação
 $totalPaginas = ceil($totalClientes / $clientesPorPagina);
 
-// Processa requisição AJAX para dados do cliente - ATUALIZADA
+// Processa exclusão de cliente
+if (isset($_GET['delete_client_id']) && $permissionManager->hasPagePermission('clientes', 'delete')) {
+    $clienteId = (int)$_GET['delete_client_id'];
+    $forceDelete = isset($_GET['force_delete']) && $_GET['force_delete'] === '1';
+    
+    try {
+        // Busca dados do cliente antes de excluir para auditoria
+        $clienteStmt = $pdo->prepare("SELECT * FROM clientes WHERE id = :id");
+        $clienteStmt->bindParam(':id', $clienteId);
+        $clienteStmt->execute();
+        $clienteData = $clienteStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$clienteData) {
+            $error = "Cliente não encontrado.";
+        } else {
+            // Verifica se o cliente possui vendas associadas
+            $vendasStmt = $pdo->prepare("SELECT COUNT(*) as total FROM vendas WHERE cliente_uasg = :uasg");
+            $vendasStmt->bindParam(':uasg', $clienteData['uasg']);
+            $vendasStmt->execute();
+            $totalVendas = $vendasStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            
+            // Verifica se o cliente possui empenhos associados
+            $empenhosStmt = $pdo->prepare("SELECT COUNT(*) as total FROM empenhos WHERE cliente_uasg = :uasg");
+            $empenhosStmt->bindParam(':uasg', $clienteData['uasg']);
+            $empenhosStmt->execute();
+            $totalEmpenhos = $empenhosStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            
+            // Se tem relações e não foi forçada a exclusão, mostra aviso
+            if (($totalVendas > 0 || $totalEmpenhos > 0) && !$forceDelete) {
+                $error = "ATENÇÃO: Este cliente possui " . 
+                         ($totalVendas > 0 ? "$totalVendas venda(s)" : "") . 
+                         ($totalVendas > 0 && $totalEmpenhos > 0 ? " e " : "") . 
+                         ($totalEmpenhos > 0 ? "$totalEmpenhos empenho(s)" : "") . 
+                         " associado(s). " .
+                         "<br><br><strong>Consequências da exclusão:</strong>" .
+                         "<br>• Os registros de vendas/empenhos permanecerão no sistema" .
+                         "<br>• Mas não será possível identificar o cliente nas consultas" .
+                         "<br>• Relatórios podem apresentar dados inconsistentes" .
+                         "<br><br><a href='consultar_clientes.php?delete_client_id=$clienteId&force_delete=1' " .
+                         "onclick='return confirm(\"CONFIRMAÇÃO FINAL: Tem absoluta certeza que deseja excluir este cliente e todas as suas associações?\")' " .
+                         "style='background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;'>" .
+                         "<i class='fas fa-exclamation-triangle'></i> SIM, EXCLUIR MESMO ASSIM</a>";
+            } else {
+                // Inicia transação para exclusão
+                $pdo->beginTransaction();
+                
+                try {
+                    // Se tem relações, primeiro atualiza/remove as referências
+                    if ($totalVendas > 0) {
+                        // Opção 1: Manter vendas mas marcar cliente como "EXCLUÍDO"
+                        $updateVendasStmt = $pdo->prepare("UPDATE vendas SET cliente_uasg = CONCAT('EXCLUÍDO-', cliente_uasg) WHERE cliente_uasg = :uasg");
+                        $updateVendasStmt->bindParam(':uasg', $clienteData['uasg']);
+                        $updateVendasStmt->execute();
+                        
+                        // Opção 2: Comentar a linha acima e descomentar a linha abaixo para excluir vendas também
+                        // $deleteVendasStmt = $pdo->prepare("DELETE FROM vendas WHERE cliente_uasg = :uasg");
+                        // $deleteVendasStmt->bindParam(':uasg', $clienteData['uasg']);
+                        // $deleteVendasStmt->execute();
+                    }
+                    
+                    if ($totalEmpenhos > 0) {
+                        // Opção 1: Manter empenhos mas marcar cliente como "EXCLUÍDO"
+                        $updateEmpenhosStmt = $pdo->prepare("UPDATE empenhos SET cliente_uasg = CONCAT('EXCLUÍDO-', cliente_uasg) WHERE cliente_uasg = :uasg");
+                        $updateEmpenhosStmt->bindParam(':uasg', $clienteData['uasg']);
+                        $updateEmpenhosStmt->execute();
+                        
+                        // Opção 2: Comentar a linha acima e descomentar a linha abaixo para excluir empenhos também
+                        // $deleteEmpenhosStmt = $pdo->prepare("DELETE FROM empenhos WHERE cliente_uasg = :uasg");
+                        // $deleteEmpenhosStmt->bindParam(':uasg', $clienteData['uasg']);
+                        // $deleteEmpenhosStmt->execute();
+                    }
+                    
+                    // Exclui o cliente
+                    $deleteStmt = $pdo->prepare("DELETE FROM clientes WHERE id = :id");
+                    $deleteStmt->bindParam(':id', $clienteId);
+                    $deleteStmt->execute();
+                    
+                    // Confirma transação
+                    $pdo->commit();
+                    
+                    // Registra auditoria com informações das relações
+                    $auditData = [
+                        'cliente_excluido' => $clienteData,
+                        'vendas_afetadas' => $totalVendas,
+                        'empenhos_afetados' => $totalEmpenhos,
+                        'acao' => $forceDelete ? 'EXCLUSAO_FORCADA' : 'EXCLUSAO_SIMPLES'
+                    ];
+                    
+                    logAudit($pdo, $_SESSION['user']['id'], 'DELETE', 'clientes', $clienteId, null, $auditData);
+                    
+                    $success = "Cliente excluído com sucesso!" . 
+                              ($totalVendas > 0 || $totalEmpenhos > 0 ? 
+                               " As vendas/empenhos associados foram marcados como 'EXCLUÍDO' para manter histórico." : "");
+                    
+                    header("Location: consultar_clientes.php?success=" . urlencode($success));
+                    exit();
+                    
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    throw $e;
+                }
+            }
+        }
+    } catch (PDOException $e) {
+        $error = "Erro ao excluir o cliente: " . $e->getMessage();
+        error_log("Erro ao excluir cliente ID $clienteId: " . $e->getMessage());
+    }
+}
+
+// Processa requisição AJAX para dados do cliente
 if (isset($_GET['get_cliente_id'])) {
     $id = (int)$_GET['get_cliente_id'];
     try {
@@ -297,6 +413,20 @@ if (isset($_GET['get_cliente_id'])) {
             $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
             
             $cliente['stats'] = $stats;
+            
+            // Garante que todos os campos estejam presentes
+            $cliente['cnpj'] = $cliente['cnpj'] ?? '';
+            $cliente['cpf'] = $cliente['cpf'] ?? '';
+            $cliente['rg'] = $cliente['rg'] ?? '';
+            $cliente['nome_orgaos'] = $cliente['nome_orgaos'] ?? '';
+            $cliente['nome_pessoa'] = $cliente['nome_pessoa'] ?? '';
+            $cliente['telefone'] = $cliente['telefone'] ?? '';
+            $cliente['telefone2'] = $cliente['telefone2'] ?? '';
+            $cliente['email'] = $cliente['email'] ?? '';
+            $cliente['email2'] = $cliente['email2'] ?? '';
+            $cliente['endereco'] = $cliente['endereco'] ?? '';
+            $cliente['observacoes'] = $cliente['observacoes'] ?? '';
+            
             echo json_encode($cliente);
         } else {
             echo json_encode(['error' => 'Cliente não encontrado']);
@@ -675,7 +805,7 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
     table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1200px;
+        min-width: 600px;
     }
 
     table th, table td {
@@ -697,51 +827,24 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         z-index: 10;
     }
 
-    /* Ajustes de largura específicos para cada coluna */
+    /* Ajustes de largura específicos para cada coluna - SIMPLIFICADO */
     table th:nth-child(1), table td:nth-child(1) { /* UASG */
-        min-width: 80px;
-        max-width: 100px;
-    }
-
-    table th:nth-child(2), table td:nth-child(2) { /* Nome do Órgão */
-        min-width: 200px;
-        max-width: 300px;
-        white-space: normal;
-    }
-
-    table th:nth-child(3), table td:nth-child(3) { /* CNPJ */
-        min-width: 140px;
-        max-width: 160px;
-    }
-
-    table th:nth-child(4), table td:nth-child(4) { /* E-mail */
-        min-width: 180px;
-        max-width: 250px;
-    }
-
-    table th:nth-child(5), table td:nth-child(5) { /* Telefone */
-        min-width: 130px;
+        min-width: 100px;
         max-width: 150px;
+        width: 15%;
     }
 
-    table th:nth-child(6), table td:nth-child(6) { /* Endereço */
-        min-width: 150px;
-        max-width: 200px;
+    table th:nth-child(2), table td:nth-child(2) { /* Nome/Razão Social */
+        min-width: 250px;
+        white-space: normal;
+        width: 60%;
     }
 
-    table th:nth-child(7), table td:nth-child(7) { /* Cadastrado */
-        min-width: 100px;
-        max-width: 120px;
-    }
-
-    table th:nth-child(8), table td:nth-child(8) { /* Atualizado */
-        min-width: 100px;
-        max-width: 120px;
-    }
-
-    table th:nth-child(9), table td:nth-child(9) { /* Ações */
-        min-width: 120px;
+    table th:nth-child(3), table td:nth-child(3) { /* Ações */
+        min-width: 180px;
         white-space: nowrap;
+        width: 25%;
+        text-align: center;
     }
 
     /* NOVOS ESTILOS PARA ORDENAÇÃO */
@@ -798,23 +901,14 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         }
     }
 
-    /* Destaque da coluna ordenada */
+    /* Destaque da coluna ordenada - SIMPLIFICADO */
     table.sorted-by-1 th:nth-child(1),
-    table.sorted-by-1 td:nth-child(1),
+    table.sorted-by-1 td:nth-child(1) {
+        background-color: rgba(0, 191, 174, 0.05);
+    }
+
     table.sorted-by-2 th:nth-child(2),
-    table.sorted-by-2 td:nth-child(2),
-    table.sorted-by-3 th:nth-child(3),
-    table.sorted-by-3 td:nth-child(3),
-    table.sorted-by-4 th:nth-child(4),
-    table.sorted-by-4 td:nth-child(4),
-    table.sorted-by-5 th:nth-child(5),
-    table.sorted-by-5 td:nth-child(5),
-    table.sorted-by-6 th:nth-child(6),
-    table.sorted-by-6 td:nth-child(6),
-    table.sorted-by-7 th:nth-child(7),
-    table.sorted-by-7 td:nth-child(7),
-    table.sorted-by-8 th:nth-child(8),
-    table.sorted-by-8 td:nth-child(8) {
+    table.sorted-by-2 td:nth-child(2) {
         background-color: rgba(0, 191, 174, 0.05);
     }
 
@@ -836,54 +930,37 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         font-style: italic;
     }
 
-    /* Estilo para link de e-mail */
-    .email-link {
-        color: var(--secondary-color);
-        text-decoration: none;
-        transition: var(--transition);
-    }
-
-    .email-link:hover {
-        color: var(--primary-color);
-        text-decoration: underline;
-    }
-
-    /* Container de telefone na tabela */
-    .phone-display {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        justify-content: space-between;
-    }
-
-    .whatsapp-icon {
-        color: #25D366;
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: var(--transition);
-        flex-shrink: 0;
-    }
-
-    .whatsapp-icon:hover {
-        color: #128C7E;
-        transform: scale(1.1);
-    }
-
-    .phone-count {
-        background: var(--primary-color);
-        color: white;
-        font-size: 0.7rem;
-        padding: 0.1rem 0.3rem;
-        border-radius: 10px;
-        font-weight: 600;
-        flex-shrink: 0;
-    }
-
     /* Botões de ação na tabela */
     .action-buttons {
         display: flex;
         gap: 0.5rem;
         flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    /* Badges para tipo de pessoa */
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-primary {
+        color: white;
+        background-color: var(--primary-color);
+    }
+
+    .badge-info {
+        color: white;
+        background-color: var(--info-color);
     }
 
     /* Paginação */
@@ -1084,45 +1161,7 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         flex: 1;
     }
 
-    .whatsapp-link {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: var(--radius);
-        background: #25D366;
-        color: white;
-        text-decoration: none;
-        transition: var(--transition);
-    }
-
-    .whatsapp-link:hover {
-        background: #128C7E;
-        transform: scale(1.1);
-    }
-
-    .phone-remove {
-        background: var(--danger-color);
-        color: white;
-        border: none;
-        border-radius: var(--radius);
-        width: 32px;
-        height: 32px;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .phone-remove:hover {
-        background: #c82333;
-        transform: scale(1.1);
-    }
-
-    /* Estatísticas detalhadas do cliente - ATUALIZADA */
+    /* Estatísticas detalhadas do cliente */
     .client-stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1231,75 +1270,7 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         }
     }
 
-    /* Responsividade das estatísticas do modal */
-    @media (max-width: 768px) {
-        .client-stats {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
-        }
-        
-        .stat-card {
-            padding: 1rem;
-        }
-        
-        .stat-number {
-            font-size: 1.3rem;
-        }
-        
-        .stat-label {
-            font-size: 0.75rem;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .client-stats {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-        }
-        
-        .stat-card {
-            padding: 0.75rem;
-        }
-        
-        .stat-number {
-            font-size: 1.1rem;
-        }
-    }
-
-    /* Responsividade da tabela expandida */
-    @media (max-width: 1400px) {
-        .table-responsive {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        table {
-            min-width: 1200px;
-        }
-    }
-
-    @media (max-width: 1200px) {
-        .clients-container {
-            margin: 0 1rem;
-        }
-        
-        table th, table td {
-            padding: 0.5rem 0.25rem;
-            font-size: 0.85rem;
-        }
-        
-        table th:nth-child(6), table td:nth-child(6) { /* Endereço */
-            display: none;
-        }
-    }
-
-    @media (max-width: 992px) {
-        table th:nth-child(4), table td:nth-child(4), /* E-mail */
-        table th:nth-child(8), table td:nth-child(8) { /* Atualizado */
-            display: none;
-        }
-    }
-
+    /* Responsividade para 3 colunas */
     @media (max-width: 768px) {
         .page-header {
             padding: 1.5rem;
@@ -1323,18 +1294,24 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             text-align: center;
         }
 
-        table th:nth-child(3), table td:nth-child(3), /* CNPJ */
-        table th:nth-child(5), table td:nth-child(5), /* Telefone */
-        table th:nth-child(7), table td:nth-child(7) { /* Cadastrado */
-            display: none;
+        table {
+            min-width: 500px;
         }
         
-        table th:nth-child(2), table td:nth-child(2) { /* Nome do Órgão */
-            max-width: 200px;
+        table th:nth-child(1), table td:nth-child(1) { /* UASG */
+            min-width: 80px;
+            max-width: 100px;
+        }
+        
+        table th:nth-child(2), table td:nth-child(2) { /* Nome */
+            min-width: 200px;
+        }
+        
+        table th:nth-child(3), table td:nth-child(3) { /* Ações */
+            min-width: 150px;
         }
 
         .action-buttons {
-            justify-content: center;
             flex-direction: column;
             gap: 0.25rem;
         }
@@ -1381,21 +1358,27 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         }
 
         table {
-            min-width: 350px;
+            min-width: 400px;
         }
         
-        table th, table td {
-            padding: 0.375rem 0.25rem;
-            font-size: 0.8rem;
+        table th:nth-child(1), table td:nth-child(1) { /* UASG */
+            min-width: 70px;
+            max-width: 80px;
+            font-size: 0.85rem;
         }
         
-        table th:nth-child(2), table td:nth-child(2) { /* Nome do Órgão */
-            max-width: 150px;
+        table th:nth-child(2), table td:nth-child(2) { /* Nome */
+            min-width: 150px;
+            font-size: 0.85rem;
+        }
+        
+        table th:nth-child(3), table td:nth-child(3) { /* Ações */
+            min-width: 120px;
         }
 
-        .btn-sm {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.8rem;
+        .action-buttons .btn-sm {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
         }
 
         .modal-header {
@@ -1405,13 +1388,22 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         .modal-header h3 {
             font-size: 1.2rem;
         }
-        
-        .action-buttons .btn-sm {
-            padding: 0.2rem 0.4rem;
+
+        .client-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
         }
         
-        .action-buttons .btn-sm i {
-            font-size: 0.7rem;
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 1.3rem;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
         }
     }
 
@@ -1478,6 +1470,406 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         justify-content: flex-start;
         min-height: 100%;
     }
+
+    /* ===========================================
+   ESTILOS ADICIONAIS PARA CONSULTA DE CLIENTES
+   =========================================== */
+
+/* Filtros no estilo empenhos */
+.filters-container {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--light-gray) 0%, #e9ecef 100%);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.search-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.search-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--medium-gray);
+    text-transform: uppercase;
+}
+
+.search-input {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: white;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(0, 191, 174, 0.1);
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: white;
+    min-width: 160px;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(0, 191, 174, 0.1);
+}
+
+/* Paginação estilo empenhos */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--light-gray);
+    border-radius: var(--radius);
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    background: white;
+    color: var(--primary-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+.page-btn:hover {
+    border-color: var(--secondary-color);
+    background: var(--secondary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.page-btn.active {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.page-btn:disabled,
+.page-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pagination-info {
+    color: var(--medium-gray);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Status badges como empenhos */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.pendente {
+    background: rgba(253, 126, 20, 0.1);
+    color: var(--pendente-color);
+    border: 1px solid var(--pendente-color);
+}
+
+.status-badge.pago {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--pago-color);
+    border: 1px solid var(--pago-color);
+}
+
+/* Elementos interativos como empenhos */
+.numero-empenho {
+    cursor: pointer;
+    color: var(--secondary-color);
+    font-weight: 600;
+    transition: var(--transition);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 191, 174, 0.1);
+}
+
+.numero-empenho:hover {
+    color: var(--primary-color);
+    background: rgba(45, 137, 62, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 191, 174, 0.2);
+}
+
+.numero-empenho i {
+    font-size: 0.8rem;
+}
+
+/* Ordenação da tabela */
+.sort-icon {
+    opacity: 0.5;
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+th:hover .sort-icon {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.sort-asc {
+    opacity: 1;
+    color: var(--success-color);
+    transform: rotate(0deg);
+}
+
+.sort-desc {
+    opacity: 1;
+    color: var(--danger-color);
+    transform: rotate(180deg);
+}
+
+th[onclick] {
+    transition: background 0.2s ease;
+}
+
+th[onclick]:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsividade para filtros */
+@media (max-width: 1200px) {
+    .filters-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .filters-row > * {
+        width: 100%;
+    }
+}
+
+/* ===========================================
+   BOTÃO NOVO CLIENTE
+   =========================================== */
+.novo-cliente-container {
+    background: linear-gradient(135deg, rgba(0, 191, 174, 0.1) 0%, rgba(45, 137, 62, 0.1) 100%);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    border: 2px dashed var(--secondary-color);
+    margin: 2rem 0;
+}
+
+.btn-novo-cliente {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+    color: white;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 6px 20px rgba(0, 191, 174, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-novo-cliente::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s;
+}
+
+.btn-novo-cliente:hover::before {
+    left: 100%;
+}
+
+.btn-novo-cliente:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 191, 174, 0.4);
+    text-decoration: none;
+    color: white;
+}
+
+.btn-novo-cliente i {
+    font-size: 1.3rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Paginação estilo empenhos - ATUALIZAÇÃO */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--light-gray);
+    border-radius: var(--radius);
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    background: white;
+    color: var(--primary-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+.page-btn:hover {
+    border-color: var(--secondary-color);
+    background: var(--secondary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.page-btn.active {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.page-btn:disabled,
+.page-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pagination-info {
+    color: var(--medium-gray);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .btn-novo-cliente {
+        width: 100%;
+        justify-content: center;
+        padding: 1.2rem;
+        font-size: 1rem;
+    }
+    
+    .novo-cliente-container {
+        margin: 1.5rem 0;
+        padding: 1rem;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-novo-cliente span {
+        font-size: 0.9rem;
+    }
+    
+    .page-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+        min-width: 35px;
+    }
+}
+
+/* Estilos para avisos de exclusão */
+.deletion-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 2px solid #ffc107;
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1rem 0;
+    animation: warningPulse 2s infinite;
+}
+
+.deletion-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border: 2px solid #dc3545;
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1rem 0;
+    animation: dangerPulse 2s infinite;
+}
+
+@keyframes warningPulse {
+    0%, 100% { border-color: #ffc107; box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+    50% { border-color: #e0a800; box-shadow: 0 0 0 5px rgba(255, 193, 7, 0.2); }
+}
+
+@keyframes dangerPulse {
+    0%, 100% { border-color: #dc3545; box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    50% { border-color: #c82333; box-shadow: 0 0 0 5px rgba(220, 53, 69, 0.2); }
+}
 </style>
 
 <div class="main-content">
@@ -1503,6 +1895,14 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                 <?php echo htmlspecialchars($success); ?>
             </div>
         <?php endif; ?>
+
+        <!-- Botão Novo Cliente -->
+<div class="novo-cliente-container" style="margin-bottom: 2rem; text-align: center;">
+    <a href="cadastrar_clientes.php" class="btn btn-success btn-novo-cliente">
+        <i class="fas fa-user-plus"></i>
+        <span>Incluir Novo Cliente</span>
+    </a>
+</div>
 
         <!-- Barra de controles principal -->
         <div class="controls-bar">
@@ -1547,7 +1947,55 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             <?php endif; ?>
         </div>
 
-        <!-- Seção de filtros avançados -->
+       <!-- Filtros expandidos com estilo similar ao de empenhos -->
+        <div class="filters-container">
+            <form action="consultar_clientes.php" method="GET" id="filtersForm">
+                <div class="filters-row">
+                    <div class="search-group">
+                        <label for="search">Buscar por:</label>
+                        <input type="text" 
+                               name="search" 
+                               id="search" 
+                               class="search-input"
+                               placeholder="Nome, UASG, CNPJ, E-mail, Telefone ou Endereço..." 
+                               value="<?php echo htmlspecialchars($searchTerm ?? ''); ?>"
+                               autocomplete="off">
+                    </div>
+                    
+                    <div class="search-group">
+                        <label for="filter_cpf">CPF:</label>
+                        <input type="text" 
+                               name="filter_cpf" 
+                               id="filter_cpf" 
+                               class="filter-select"
+                               placeholder="Digite o CPF..."
+                               value="<?php echo htmlspecialchars($filterCpf ?? ''); ?>">
+                    </div>
+                    
+                    <div class="search-group">
+                        <label for="filter_nome_pessoa">Nome da Pessoa:</label>
+                        <input type="text" 
+                               name="filter_nome_pessoa" 
+                               id="filter_nome_pessoa" 
+                               class="filter-select"
+                               placeholder="Nome da pessoa física..."
+                               value="<?php echo htmlspecialchars($filterNomePessoa ?? ''); ?>">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> 
+                        Filtrar
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary" onclick="limparFiltros()">
+                        <i class="fas fa-undo"></i> 
+                        Limpar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Filtros avançados em seção separada -->
         <div class="filters-section">
             <button type="button" class="filters-toggle" onclick="toggleFilters()">
                 <span><i class="fas fa-filter"></i> Filtros Avançados</span>
@@ -1556,15 +2004,15 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             
             <div class="filters-content" id="filtersContent">
                 <form action="consultar_clientes.php" method="GET">
-                    <!-- Preserva busca e ordenação -->
+                    <!-- Preserva busca principal -->
                     <?php if (!empty($searchTerm)): ?>
                         <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>">
                     <?php endif; ?>
-                    <?php if ($orderBy !== 'nome_orgaos'): ?>
-                        <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($orderBy); ?>">
+                    <?php if (!empty($filterCpf)): ?>
+                        <input type="hidden" name="filter_cpf" value="<?php echo htmlspecialchars($filterCpf); ?>">
                     <?php endif; ?>
-                    <?php if ($orderDir !== 'ASC'): ?>
-                        <input type="hidden" name="order_dir" value="<?php echo strtolower($orderDir); ?>">
+                    <?php if (!empty($filterNomePessoa)): ?>
+                        <input type="hidden" name="filter_nome_pessoa" value="<?php echo htmlspecialchars($filterNomePessoa); ?>">
                     <?php endif; ?>
                     
                     <div class="filters-grid">
@@ -1612,16 +2060,16 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             </div>
         </div>
 
-        <!-- Informações de resultados -->
+        <!-- Informações de resultados melhorada -->
         <?php if ($totalClientes > 0): ?>
             <div class="results-info">
                 <div class="results-count">
-                    <?php if ($searchTerm || $filterCnpj || $filterEmail || $filterDate): ?>
+                    <?php if ($searchTerm || $filterCpf || $filterNomePessoa || $filterCnpj || $filterEmail || $filterDate): ?>
                         Encontrados <strong><?php echo $totalClientes; ?></strong> cliente(s) 
                         <?php if ($searchTerm): ?>
                             para "<strong><?php echo htmlspecialchars($searchTerm); ?></strong>"
                         <?php endif; ?>
-                        <?php if ($filterCnpj || $filterEmail || $filterDate): ?>
+                        <?php if ($filterCpf || $filterNomePessoa || $filterCnpj || $filterEmail || $filterDate): ?>
                             com filtros aplicados
                         <?php endif; ?>
                     <?php else: ?>
@@ -1645,24 +2093,32 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             </div>
         <?php endif; ?>
 
-        <!-- Tabela de clientes com ordenação completa -->
+        <!-- Tabela de clientes simplificada -->
         <?php if (count($clientes) > 0): ?>
             <div class="table-container">
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>
-                                    <a href="<?php echo getSortUrl('uasg'); ?>" class="sortable-header">
-                                        <i class="fas fa-hashtag"></i> UASG
-                                        <i class="<?php echo getSortIcon('uasg'); ?> sort-icon"></i>
-                                    </a>
+                                <th onclick="ordenarTabela('uasg')" style="cursor: pointer;" title="Clique para ordenar">
+                                    <i class="fas fa-hashtag"></i> UASG 
+                                    <i class="fas fa-sort sort-icon" id="sort-uasg"></i>
                                 </th>
-                                <th>
-                                    <a href="<?php echo getSortUrl('nome_orgaos'); ?>" class="sortable-header">
-                                        <i class="fas fa-building"></i> Nome do Órgão
-                                        <i class="<?php echo getSortIcon('nome_orgaos'); ?> sort-icon"></i>
-                                    </a>
+                                <th onclick="ordenarTabela('nome')" style="cursor: pointer;" title="Clique para ordenar">
+                                    <i class="fas fa-user"></i> Nome/Razão Social 
+                                    <i class="fas fa-sort sort-icon" id="sort-nome"></i>
+                                </th>
+                                <th onclick="ordenarTabela('tipo')" style="cursor: pointer;" title="Clique para ordenar">
+                                    <i class="fas fa-user-tag"></i> Tipo 
+                                    <i class="fas fa-sort sort-icon" id="sort-tipo"></i>
+                                </th>
+                                <th onclick="ordenarTabela('documento')" style="cursor: pointer;" title="Clique para ordenar">
+                                    <i class="fas fa-id-card"></i> CPF/CNPJ 
+                                    <i class="fas fa-sort sort-icon" id="sort-documento"></i>
+                                </th>
+                                <th onclick="ordenarTabela('contato')" style="cursor: pointer;" title="Clique para ordenar">
+                                    <i class="fas fa-phone"></i> Contato 
+                                    <i class="fas fa-sort sort-icon" id="sort-contato"></i>
                                 </th>
                                 <th><i class="fas fa-cogs"></i> Ações</th>
                             </tr>
@@ -1671,15 +2127,77 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                             <?php foreach ($clientes as $cliente): ?>
                                 <tr>
                                     <td>
-                                        <a href="javascript:void(0);" 
-                                           onclick="openModal(<?php echo $cliente['id']; ?>)" 
-                                           class="client-link">
+                                        <span class="numero-empenho" onclick="openModal(<?php echo $cliente['id']; ?>)">
+                                            <i class="fas fa-eye"></i>
                                             <?php echo htmlspecialchars($cliente['uasg']); ?>
-                                        </a>
+                                        </span>
                                     </td>
-                                    <td><?php echo htmlspecialchars($cliente['nome_orgaos']); ?></td>
+                                    <td>
+                                        <div>
+                                            <strong style="color: var(--primary-color); font-size: 1rem;">
+                                                <?php echo htmlspecialchars($cliente['nome_principal']); ?>
+                                            </strong>
+                                            <?php if ($cliente['endereco']): ?>
+                                                <br><small style="color: var(--medium-gray); display: flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem;">
+                                                    <i class="fas fa-map-marker-alt"></i> 
+                                                    <?php echo htmlspecialchars(substr($cliente['endereco'], 0, 50) . (strlen($cliente['endereco']) > 50 ? '...' : '')); ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if ($cliente['tipo_pessoa'] === 'PF'): ?>
+                                            <span class="status-badge pendente">
+                                                <i class="fas fa-user"></i>
+                                                Pessoa Física
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="status-badge pago">
+                                                <i class="fas fa-building"></i>
+                                                Pessoa Jurídica
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong style="color: var(--success-color); font-size: 1rem;">
+                                                <?php 
+                                                if ($cliente['tipo_pessoa'] === 'PF' && $cliente['cpf']) {
+                                                    echo htmlspecialchars($cliente['cpf']);
+                                                } elseif ($cliente['tipo_pessoa'] === 'PJ' && $cliente['cnpj']) {
+                                                    echo htmlspecialchars($cliente['cnpj']);
+                                                } else {
+                                                    echo 'Não informado';
+                                                }
+                                                ?>
+                                            </strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <?php if ($cliente['telefone']): ?>
+                                                <div style="display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.25rem;">
+                                                    <i class="fas fa-phone" style="color: var(--success-color);"></i>
+                                                    <span style="font-weight: 600;"><?php echo htmlspecialchars($cliente['telefone']); ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                            <?php if ($cliente['email']): ?>
+                                                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                                    <i class="fas fa-envelope" style="color: var(--info-color);"></i>
+                                                    <span style="font-size: 0.9rem; color: var(--medium-gray);"><?php echo htmlspecialchars($cliente['email']); ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                            <?php if (!$cliente['telefone'] && !$cliente['email']): ?>
+                                                <span style="color: var(--medium-gray); font-style: italic;">Não informado</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
                                     <td>
                                         <div class="action-buttons">
+                                            <button onclick="openModal(<?php echo $cliente['id']; ?>)" 
+                                                    class="btn btn-primary btn-sm" title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
                                             <a href="consultar_vendas_cliente.php?cliente_uasg=<?php echo urlencode($cliente['uasg']); ?>" 
                                                class="btn btn-info btn-sm" title="Ver Vendas">
                                                 <i class="fas fa-shopping-cart"></i>
@@ -1688,10 +2206,6 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                                                class="btn btn-warning btn-sm" title="Ver Empenhos">
                                                 <i class="fas fa-file-invoice-dollar"></i>
                                             </a>
-                                            <button onclick="openModal(<?php echo $cliente['id']; ?>)" 
-                                                    class="btn btn-primary btn-sm" title="Ver Detalhes">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -1700,68 +2214,6 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                     </table>
                 </div>
             </div>
-
-            <!-- Paginação -->
-            <?php if ($totalPaginas > 1): ?>
-                <div class="pagination-container">
-                    <div class="pagination">
-                        <?php if ($paginaAtual > 1): ?>
-                            <a href="<?php echo buildUrl(['page' => 1]); ?>">
-                                <i class="fas fa-angle-double-left"></i> Primeira
-                            </a>
-                            <a href="<?php echo buildUrl(['page' => $paginaAtual - 1]); ?>">
-                                <i class="fas fa-angle-left"></i> Anterior
-                            </a>
-                        <?php else: ?>
-                            <span class="disabled">
-                                <i class="fas fa-angle-double-left"></i> Primeira
-                            </span>
-                            <span class="disabled">
-                                <i class="fas fa-angle-left"></i> Anterior
-                            </span>
-                        <?php endif; ?>
-
-                        <?php
-                        $inicio = max(1, $paginaAtual - 2);
-                        $fim = min($totalPaginas, $paginaAtual + 2);
-                        
-                        if ($inicio > 1): ?>
-                            <span>...</span>
-                        <?php endif;
-                        
-                        for ($i = $inicio; $i <= $fim; $i++): ?>
-                            <?php if ($i == $paginaAtual): ?>
-                                <span class="current"><?php echo $i; ?></span>
-                            <?php else: ?>
-                                <a href="<?php echo buildUrl(['page' => $i]); ?>">
-                                    <?php echo $i; ?>
-                                </a>
-                            <?php endif; ?>
-                        <?php endfor;
-                        
-                        if ($fim < $totalPaginas): ?>
-                            <span>...</span>
-                        <?php endif; ?>
-
-                        <?php if ($paginaAtual < $totalPaginas): ?>
-                            <a href="<?php echo buildUrl(['page' => $paginaAtual + 1]); ?>">
-                                Próxima <i class="fas fa-angle-right"></i>
-                            </a>
-                            <a href="<?php echo buildUrl(['page' => $totalPaginas]); ?>">
-                                Última <i class="fas fa-angle-double-right"></i>
-                            </a>
-                        <?php else: ?>
-                            <span class="disabled">
-                                Próxima <i class="fas fa-angle-right"></i>
-                            </span>
-                            <span class="disabled">
-                                Última <i class="fas fa-angle-double-right"></i>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
         <?php else: ?>
             <!-- Estado vazio -->
             <div class="empty-state">
@@ -1783,6 +2235,67 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             </div>
         <?php endif; ?>
 
+        <!-- Paginação estilo empenhos -->
+        <?php if ($totalPaginas > 1): ?>
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Mostrando <?php echo (($paginaAtual - 1) * $clientesPorPagina + 1); ?> a 
+                <?php echo min($paginaAtual * $clientesPorPagina, $totalClientes); ?> de 
+                <?php echo $totalClientes; ?> clientes
+            </div>
+            
+            <div class="pagination">
+                <!-- Botão Anterior -->
+                <?php if ($paginaAtual > 1): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $paginaAtual - 1])); ?>" class="page-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                <?php else: ?>
+                    <span class="page-btn disabled">
+                        <i class="fas fa-chevron-left"></i>
+                    </span>
+                <?php endif; ?>
+
+                <!-- Números das páginas -->
+                <?php
+                $inicio = max(1, $paginaAtual - 2);
+                $fim = min($totalPaginas, $paginaAtual + 2);
+                
+                if ($inicio > 1): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => 1])); ?>" class="page-btn">1</a>
+                    <?php if ($inicio > 2): ?>
+                        <span class="page-btn disabled">...</span>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <?php for ($i = $inicio; $i <= $fim; $i++): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $i])); ?>" 
+                       class="page-btn <?php echo $i == $paginaAtual ? 'active' : ''; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($fim < $totalPaginas): ?>
+                    <?php if ($fim < $totalPaginas - 1): ?>
+                        <span class="page-btn disabled">...</span>
+                    <?php endif; ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $totalPaginas])); ?>" class="page-btn"><?php echo $totalPaginas; ?></a>
+                <?php endif; ?>
+
+                <!-- Botão Próximo -->
+                <?php if ($paginaAtual < $totalPaginas): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $paginaAtual + 1])); ?>" class="page-btn">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                <?php else: ?>
+                    <span class="page-btn disabled">
+                        <i class="fas fa-chevron-right"></i>
+                    </span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
     </div>
 </div>
 
@@ -1794,7 +2307,7 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
             <span class="modal-close" onclick="closeModal()">&times;</span>
         </div>
         <div class="modal-body">
-            <!-- Estatísticas detalhadas do cliente - ATUALIZADA -->
+            <!-- Estatísticas detalhadas do cliente -->
             <div class="client-stats" id="clientStats" style="display: none;">
                 <div class="stat-card">
                     <i class="fas fa-shopping-cart" style="font-size: 1.5rem; color: var(--info-color); margin-bottom: 0.5rem;"></i>
@@ -1833,19 +2346,44 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="uasg"><i class="fas fa-hashtag"></i> UASG *</label>
-                        <input type="text" name="uasg" id="uasg" class="form-control" readonly required>
+                        <label for="tipo_pessoa"><i class="fas fa-user-tag"></i> Tipo de Pessoa</label>
+                        <input type="text" name="tipo_pessoa_display" id="tipo_pessoa_display" class="form-control" readonly>
+                        <input type="hidden" name="tipo_pessoa" id="tipo_pessoa">
                     </div>
                     
                     <div class="form-group">
+                        <label for="uasg"><i class="fas fa-hashtag"></i> UASG *</label>
+                        <input type="text" name="uasg" id="uasg" class="form-control" readonly required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <!-- Campos para Pessoa Jurídica -->
+                    <div class="form-group pj-fields">
                         <label for="cnpj"><i class="fas fa-id-card"></i> CNPJ</label>
                         <input type="text" name="cnpj" id="cnpj" class="form-control" readonly>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="nome_orgaos"><i class="fas fa-building"></i> Nome do Órgão *</label>
-                    <input type="text" name="nome_orgaos" id="nome_orgaos" class="form-control" readonly required>
+                    
+                    <div class="form-group pj-fields">
+                        <label for="nome_orgaos"><i class="fas fa-building"></i> Nome do Órgão</label>
+                        <input type="text" name="nome_orgaos" id="nome_orgaos" class="form-control" readonly>
+                    </div>
+                    
+                    <!-- Campos para Pessoa Física -->
+                    <div class="form-group pf-fields" style="display: none;">
+                        <label for="cpf"><i class="fas fa-id-card"></i> CPF</label>
+                        <input type="text" name="cpf" id="cpf" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="form-group pf-fields" style="display: none;">
+                        <label for="nome_pessoa"><i class="fas fa-user"></i> Nome da Pessoa</label>
+                        <input type="text" name="nome_pessoa" id="nome_pessoa" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="form-group pf-fields" style="display: none;">
+                        <label for="rg"><i class="fas fa-address-card"></i> RG</label>
+                        <input type="text" name="rg" id="rg" class="form-control" readonly>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1853,19 +2391,30 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
                     <input type="text" name="endereco" id="endereco" class="form-control" readonly>
                 </div>
                 
-                <div class="form-group">
-                    <label><i class="fas fa-phone"></i> Telefones</label>
-                    <div id="phoneContainer">
-                        <!-- Telefones serão adicionados dinamicamente -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-phone"></i> Telefones</label>
+                        <div id="phoneContainer">
+                            <div class="phone-container">
+                                <input type="text" name="telefone" id="telefone" class="form-control" readonly placeholder="Telefone principal">
+                            </div>
+                            <div class="phone-container" style="margin-top: 0.5rem;">
+                                <input type="text" name="telefone2" id="telefone2" class="form-control" readonly placeholder="Telefone secundário">
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" id="addPhoneBtn" class="btn btn-secondary btn-sm" style="display: none;" onclick="addPhoneField()">
-                        <i class="fas fa-plus"></i> Adicionar Telefone
-                    </button>
-                </div>
-                
-                <div class="form-group">
-                    <label for="email"><i class="fas fa-envelope"></i> E-mail</label>
-                    <input type="email" name="email" id="email" class="form-control" readonly>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> E-mails</label>
+                        <div id="emailContainer">
+                            <div class="email-container">
+                                <input type="email" name="email" id="email" class="form-control" readonly placeholder="E-mail principal">
+                            </div>
+                            <div class="email-container" style="margin-top: 0.5rem;">
+                                <input type="email" name="email2" id="email2" class="form-control" readonly placeholder="E-mail secundário">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1916,17 +2465,46 @@ startPage("Consultar Clientes - LicitaSis", "clientes");
         </div>
         <div class="modal-body">
             <div style="text-align: center; margin-bottom: 2rem;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger-color); margin-bottom: 1rem;"></i>
-                <p style="font-size: 1.1rem; margin-bottom: 1rem;">
-                    Tem certeza que deseja excluir este cliente?
+    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger-color); margin-bottom: 1rem;"></i>
+    <p style="font-size: 1.1rem; margin-bottom: 1rem;">
+        Tem certeza que deseja excluir este cliente?
+    </p>
+    <p style="color: var(--danger-color); font-weight: 600;">
+        <i class="fas fa-warning"></i> Esta ação não pode ser desfeita.
+    </p>
+    
+    <!-- Informações das relações do cliente -->
+    <div id="clientRelationsInfo" style="margin-top: 1rem;">
+        <div id="noRelations" style="display: none;">
+            <p style="color: var(--success-color); font-size: 0.9rem;">
+                <i class="fas fa-check-circle"></i> 
+                Este cliente não possui vendas ou empenhos associados.
+            </p>
+        </div>
+        
+        <div id="hasRelations" style="display: none;">
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                <p style="color: #856404; font-weight: 600; margin: 0 0 0.5rem 0;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    ATENÇÃO: Este cliente possui registros associados:
                 </p>
-                <p style="color: var(--danger-color); font-weight: 600;">
-                    <i class="fas fa-warning"></i> Esta ação não pode ser desfeita.
-                </p>
-                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 1rem;">
-                    O cliente só pode ser excluído se não possuir vendas ou empenhos associados.
-                </p>
+                <ul id="relationsList" style="margin: 0.5rem 0 0 1.5rem; color: #856404; text-align: left;">
+                </ul>
+                <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 0.75rem; margin-top: 1rem;">
+                    <p style="color: #721c24; font-size: 0.85rem; margin: 0; font-weight: 600;">
+                        <i class="fas fa-info-circle"></i> CONSEQUÊNCIAS DA EXCLUSÃO:
+                    </p>
+                    <ul style="color: #721c24; font-size: 0.8rem; margin: 0.5rem 0 0 1.2rem; text-align: left;">
+                        <li>Os registros de vendas/empenhos serão mantidos no sistema</li>
+                        <li>Mas serão marcados como "EXCLUÍDO" nas consultas</li>
+                        <li>Relatórios podem apresentar dados inconsistentes</li>
+                        <li>Não será possível recuperar a associação posteriormente</li>
+                    </ul>
+                </div>
             </div>
+        </div>
+    </div>
+</div>
             
             <div class="modal-buttons">
                 <button type="button" class="btn btn-danger" onclick="deleteClient()">
@@ -1956,7 +2534,7 @@ const phpData = {
 
 <?php
 // JavaScript separado para ser passado para endPage
-$javascript = <<<JS
+$javascript = <<<'JS'
 // JavaScript para funcionalidades da página
 document.addEventListener('DOMContentLoaded', function() {
     // Função para alternar filtros
@@ -1999,15 +2577,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Preenche os campos básicos
                 document.getElementById('client_id').value = data.id;
+                document.getElementById('tipo_pessoa').value = data.tipo_pessoa;
+                document.getElementById('tipo_pessoa_display').value = data.tipo_pessoa === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica';
                 document.getElementById('uasg').value = data.uasg || '';
-                document.getElementById('cnpj').value = data.cnpj || '';
-                document.getElementById('nome_orgaos').value = data.nome_orgaos || '';
                 document.getElementById('endereco').value = data.endereco || '';
-                document.getElementById('email').value = data.email || '';
                 document.getElementById('observacoes').value = data.observacoes || '';
 
-                // Processa telefones
-                loadPhones(data.telefone || '');
+                // Preenche campos baseado no tipo de pessoa
+                if (data.tipo_pessoa === 'PF') {
+                    // Mostra campos de PF
+                    document.querySelectorAll('.pf-fields').forEach(field => field.style.display = 'block');
+                    document.querySelectorAll('.pj-fields').forEach(field => field.style.display = 'none');
+                    
+                    document.getElementById('cpf').value = data.cpf || '';
+                    document.getElementById('nome_pessoa').value = data.nome_pessoa || '';
+                    document.getElementById('rg').value = data.rg || '';
+                } else {
+                    // Mostra campos de PJ
+                    document.querySelectorAll('.pj-fields').forEach(field => field.style.display = 'block');
+                    document.querySelectorAll('.pf-fields').forEach(field => field.style.display = 'none');
+                    
+                    document.getElementById('cnpj').value = data.cnpj || '';
+                    document.getElementById('nome_orgaos').value = data.nome_orgaos || '';
+                }
+
+                // Preenche telefones
+                document.getElementById('telefone').value = data.telefone || '';
+                document.getElementById('telefone2').value = data.telefone2 || '';
+                
+                // Preenche e-mails
+                document.getElementById('email').value = data.email || '';
+                document.getElementById('email2').value = data.email2 || '';
 
                 // Atualiza estatísticas detalhadas
                 if (data.stats) {
@@ -2023,65 +2623,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     };
 
-    // Função para carregar telefones
-    function loadPhones(phoneString) {
-        const container = document.getElementById('phoneContainer');
-        container.innerHTML = '';
-
-        if (phoneString) {
-            const phones = phoneString.split('/').filter(phone => phone.trim());
-            phones.forEach(phone => addPhoneField(phone.trim()));
-        }
-
-        if (container.children.length === 0) {
-            addPhoneField('');
-        }
-    }
-
-    // Função para adicionar campo de telefone
-    window.addPhoneField = function(phone = '') {
-        const container = document.getElementById('phoneContainer');
-        const phoneDiv = document.createElement('div');
-        phoneDiv.className = 'phone-container';
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.name = 'telefone[]';
-        input.value = phone;
-        input.className = 'form-control';
-        input.readOnly = true;
-        input.placeholder = '(00) 00000-0000';
-        
-        const whatsappLink = document.createElement('a');
-        whatsappLink.href = phone ? 'https://wa.me/55' + phone.replace(/\\\\D/g, '') : '#';
-        whatsappLink.target = '_blank';
-        whatsappLink.className = 'whatsapp-link';
-        whatsappLink.innerHTML = '<i class=\"fab fa-whatsapp\"></i>';
-        whatsappLink.title = 'Abrir no WhatsApp';
-        
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'phone-remove';
-        removeBtn.innerHTML = '<i class=\"fas fa-times\"></i>';
-        removeBtn.title = 'Remover telefone';
-        removeBtn.style.display = 'none';
-        removeBtn.onclick = function() {
-            phoneDiv.remove();
-        };
-        
-        phoneDiv.appendChild(input);
-        phoneDiv.appendChild(whatsappLink);
-        phoneDiv.appendChild(removeBtn);
-        container.appendChild(phoneDiv);
-
-        // Atualiza link do WhatsApp quando o telefone muda
-        input.addEventListener('input', function() {
-            const cleanPhone = this.value.replace(/\\\\D/g, '');
-            whatsappLink.href = cleanPhone ? 'https://wa.me/55' + cleanPhone : '#';
-        });
-    };
-
-    // Função para atualizar estatísticas detalhadas - ATUALIZADA
+    // Função para atualizar estatísticas detalhadas
     function updateStats(stats) {
         const statsContainer = document.getElementById('clientStats');
         const modalHeader = document.querySelector('.modal-header');
@@ -2203,17 +2745,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.enableEditing = function() {
         const inputs = document.querySelectorAll('#clientForm input:not([type=hidden]), #clientForm textarea');
         inputs.forEach(input => {
-            if (input.name !== 'cnpj') { // CNPJ não pode ser editado
+            // CNPJ, CPF e UASG não podem ser editados
+            if (input.name !== 'cnpj' && input.name !== 'cpf' && input.name !== 'uasg' && input.name !== 'tipo_pessoa_display') {
                 input.readOnly = false;
             }
         });
 
-        // Mostra botões de ação na edição
-        document.querySelectorAll('.phone-remove').forEach(btn => {
-            btn.style.display = 'flex';
-        });
-        
-        document.getElementById('addPhoneBtn').style.display = 'inline-flex';
         document.getElementById('saveBtn').style.display = 'inline-flex';
         document.getElementById('editBtn').style.display = 'none';
     };
@@ -2228,8 +2765,6 @@ document.addEventListener('DOMContentLoaded', function() {
             input.readOnly = true;
         });
         
-        document.getElementById('phoneContainer').innerHTML = '';
-        document.getElementById('addPhoneBtn').style.display = 'none';
         document.getElementById('saveBtn').style.display = 'none';
         document.getElementById('editBtn').style.display = 'inline-flex';
         document.getElementById('clientStats').style.display = 'none';
@@ -2240,9 +2775,9 @@ document.addEventListener('DOMContentLoaded', function() {
             statusIndicator.remove();
         }
         
-        document.querySelectorAll('.phone-remove').forEach(btn => {
-            btn.style.display = 'none';
-        });
+        // Oculta campos de PF e PJ
+        document.querySelectorAll('.pf-fields').forEach(field => field.style.display = 'none');
+        document.querySelectorAll('.pj-fields').forEach(field => field.style.display = 'none');
     }
 
     // Função para fechar modal
@@ -2255,10 +2790,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Modal de exclusão
     window.openDeleteModal = function() {
-        const deleteModal = document.getElementById('deleteModal');
-        deleteModal.style.display = 'block';
-        window.clientToDelete = document.getElementById('client_id').value;
-    };
+    const deleteModal = document.getElementById('deleteModal');
+    deleteModal.style.display = 'block';
+    window.clientToDelete = document.getElementById('client_id').value;
+    
+    // Busca e mostra relações do cliente
+    const statsElement = document.getElementById('clientStats');
+    if (statsElement && statsElement.style.display !== 'none') {
+        const totalVendas = parseInt(document.getElementById('statVendas').textContent) || 0;
+        const totalEmpenhos = parseInt(document.getElementById('statEmpenhos').textContent) || 0;
+        
+        const noRelationsDiv = document.getElementById('noRelations');
+        const hasRelationsDiv = document.getElementById('hasRelations');
+        const relationsList = document.getElementById('relationsList');
+        const deleteBtn = document.querySelector('#deleteModal .btn-danger');
+        
+        if (totalVendas > 0 || totalEmpenhos > 0) {
+            // Tem relações - mostra avisos
+            noRelationsDiv.style.display = 'none';
+            hasRelationsDiv.style.display = 'block';
+            
+            relationsList.innerHTML = '';
+            if (totalVendas > 0) {
+                relationsList.innerHTML += `<li><strong>${totalVendas}</strong> venda(s) registrada(s)</li>`;
+            }
+            if (totalEmpenhos > 0) {
+                relationsList.innerHTML += `<li><strong>${totalEmpenhos}</strong> empenho(s) registrado(s)</li>`;
+            }
+            
+            // Muda o botão para indicar exclusão forçada
+            deleteBtn.className = 'btn btn-danger';
+            deleteBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Excluir Mesmo Assim';
+            deleteBtn.title = 'Excluir cliente e marcar registros associados como EXCLUÍDO';
+            deleteBtn.style.background = '#dc3545';
+            
+        } else {
+            // Não tem relações - exclusão normal
+            noRelationsDiv.style.display = 'block';
+            hasRelationsDiv.style.display = 'none';
+            
+            deleteBtn.className = 'btn btn-danger';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Sim, Excluir';
+            deleteBtn.title = 'Excluir cliente';
+            deleteBtn.style.background = '#dc3545';
+        }
+        
+        deleteBtn.disabled = false;
+    } else {
+        // Se não tem estatísticas carregadas, assume exclusão normal
+        document.getElementById('noRelations').style.display = 'block';
+        document.getElementById('hasRelations').style.display = 'none';
+    }
+};
 
     window.closeDeleteModal = function() {
         const deleteModal = document.getElementById('deleteModal');
@@ -2267,29 +2850,57 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.deleteClient = function() {
-        if (window.clientToDelete) {
+    if (window.clientToDelete) {
+        const totalVendas = parseInt(document.getElementById('statVendas').textContent) || 0;
+        const totalEmpenhos = parseInt(document.getElementById('statEmpenhos').textContent) || 0;
+        
+        let confirmMessage = 'Tem certeza que deseja excluir este cliente?';
+        
+        if (totalVendas > 0 || totalEmpenhos > 0) {
+            confirmMessage = `ATENÇÃO: Este cliente possui ${totalVendas} venda(s) e ${totalEmpenhos} empenho(s) associados.\n\n` +
+                           `CONSEQUÊNCIAS:\n` +
+                           `• Os registros serão mantidos mas marcados como "EXCLUÍDO"\n` +
+                           `• Relatórios podem ficar inconsistentes\n` +
+                           `• Não será possível recuperar a associação\n\n` +
+                           `Tem CERTEZA ABSOLUTA que deseja continuar?`;
+        }
+        
+        const confirmDelete = confirm(confirmMessage);
+        if (confirmDelete) {
+            // Se tem relações, pede confirmação adicional
+            if (totalVendas > 0 || totalEmpenhos > 0) {
+                const finalConfirm = confirm('ÚLTIMA CONFIRMAÇÃO:\n\nEsta é uma ação irreversível que pode afetar a integridade dos dados.\n\nContinuar mesmo assim?');
+                if (!finalConfirm) {
+                    return;
+                }
+            }
+            
+            // Mostra loading
+            const deleteBtn = document.querySelector('#deleteModal .btn-danger');
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+            deleteBtn.disabled = true;
+            
+            // Redireciona para exclusão
             window.location.href = 'consultar_clientes.php?delete_client_id=' + window.clientToDelete;
         }
-    };
+    }
+};
 
-    // JavaScript adicional para funcionalidades de ordenação
+    // JavaScript adicional para funcionalidades de ordenação - SIMPLIFICADO
     function updateSortedColumnClass() {
         const table = document.querySelector('table');
         if (!table) return;
         
         // Remove classes antigas
-        table.className = table.className.replace(/sorted-by-\\\\d+/g, '');
+        table.className = table.className.replace(/sorted-by-\d+/g, '');
         
-        // Mapeia campos para índices de coluna
+        // Mapeia campos para índices de coluna - SIMPLIFICADO PARA 3 COLUNAS
         const fieldToColumnMap = {
             'uasg': 1,
+            'nome_principal': 2,
             'nome_orgaos': 2,
-            'cnpj': 3,
-            'email': 4,
-            'telefone': 5,
-            'endereco': 6,
-            'created_at': 7,
-            'updated_at': 8
+            'nome_pessoa': 2
         };
         
         const currentOrderBy = phpData.orderBy;
@@ -2298,21 +2909,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (columnIndex) {
             table.classList.add('sorted-by-' + columnIndex);
         }
-    }
-
-    // Tooltip para valores truncados
-    function initializeTooltips() {
-        document.querySelectorAll('td[title]').forEach(cell => {
-            cell.addEventListener('mouseenter', function(e) {
-                const title = this.getAttribute('title');
-                const content = this.textContent.trim();
-                
-                if (title && title !== content && title.length > content.length) {
-                    this.style.position = 'relative';
-                    this.style.overflow = 'visible';
-                }
-            });
-        });
     }
 
     // Função para copiar dados da célula
@@ -2340,7 +2936,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             document.execCommand('copy');
-            showToast('Copiado para a área de transferência!', 'success');
+            showToast('Copiado para a área de transferência!','success');
         } catch (err) {
             console.error('Falha ao copiar: ', err);
         }
@@ -2357,7 +2953,7 @@ document.addEventListener('DOMContentLoaded', function() {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: \${type === 'success' ? 'var(--success-color)' : 'var(--info-color)'};
+            background: ${type === 'success' ? 'var(--success-color)' : 'var(--info-color)'};
             color: white;
             padding: 1rem 1.5rem;
             border-radius: var(--radius);
@@ -2434,18 +3030,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validação do formulário
     document.getElementById('clientForm').addEventListener('submit', function(e) {
         const uasg = document.getElementById('uasg').value.trim();
-        const nomeOrgao = document.getElementById('nome_orgaos').value.trim();
+        const tipoPessoa = document.getElementById('tipo_pessoa').value;
         
-        if (!uasg || !nomeOrgao) {
+        if (!uasg) {
             e.preventDefault();
-            alert('UASG e Nome do Órgão são campos obrigatórios.');
+            alert('UASG é campo obrigatório.');
             return;
+        }
+
+        if (tipoPessoa === 'PJ') {
+            const nomeOrgao = document.getElementById('nome_orgaos').value.trim();
+            if (!nomeOrgao) {
+                e.preventDefault();
+                alert('Nome do Órgão é obrigatório para Pessoa Jurídica.');
+                return;
+            }
+        } else if (tipoPessoa === 'PF') {
+            const nomePessoa = document.getElementById('nome_pessoa').value.trim();
+            if (!nomePessoa) {
+                e.preventDefault();
+                alert('Nome da Pessoa é obrigatório para Pessoa Física.');
+                return;
+            }
         }
     });
 
     // Inicializa funcionalidades
     updateSortedColumnClass();
-    initializeTooltips();
     initializeCopyOnDoubleClick();
     initializeRowHighlight();
 
@@ -2485,10 +3096,106 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('- Cópia por duplo clique ✓');
     console.log('- Animações e transições ✓');
     console.log('- Responsividade ✓');
+    console.log('- Tabela simplificada (3 colunas) ✓');
+    console.log('- Paginação corrigida ✓');
     console.log('=====================================');
+});
+
+
+// Sistema de ordenação da tabela
+let currentSort = {
+    column: null,
+    direction: 'asc'
+};
+
+function ordenarTabela(coluna) {
+    console.log('🔄 Ordenando tabela por:', coluna);
+    
+    if (currentSort.column === coluna) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.direction = 'asc';
+    }
+    
+    currentSort.column = coluna;
+    
+    atualizarIconesOrdenacao(coluna, currentSort.direction);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('ordenar', coluna);
+    urlParams.set('direcao', currentSort.direction);
+    urlParams.delete('pagina');
+    
+    window.location.href = window.location.pathname + '?' + urlParams.toString();
+}
+
+function atualizarIconesOrdenacao(colunaAtiva, direcao) {
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    const iconAtivo = document.getElementById('sort-' + colunaAtiva);
+    if (iconAtivo) {
+        if (direcao === 'asc') {
+            iconAtivo.className = 'fas fa-sort-up sort-icon sort-asc';
+        } else {
+            iconAtivo.className = 'fas fa-sort-down sort-icon sort-desc';
+        }
+    }
+}
+
+function limparFiltros() {
+    const form = document.getElementById('filtersForm');
+    if (form) {
+        form.reset();
+        form.submit();
+    }
+}
+
+// Auto-submit dos filtros com delay
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const form = document.getElementById('filtersForm');
+                if (form) form.submit();
+            }, 800);
+        });
+    }
+    
+    // Event listeners para filtros específicos
+    ['filter_cpf', 'filter_nome_pessoa'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            let timeout;
+            input.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    const form = document.getElementById('filtersForm');
+                    if (form) form.submit();
+                }, 1000);
+            });
+        }
+    });
+    
+    // Inicializa ordenação baseada na URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const ordenar = urlParams.get('ordenar');
+    const direcao = urlParams.get('direcao') || 'asc';
+    
+    if (ordenar) {
+        currentSort.column = ordenar;
+        currentSort.direction = direcao;
+        atualizarIconesOrdenacao(ordenar, direcao);
+    }
 });
 JS;
 
 // Chama a função endPage com o JavaScript
 endPage(false, $javascript);
+
+
 ?>

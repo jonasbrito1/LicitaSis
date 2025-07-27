@@ -5,6 +5,41 @@
 // Versão: 7.1 Corrigida - Todas as funcionalidades implementadas
 // ===========================================
 
+// Inicia buffer para capturar output indesejado
+// Detecção mais robusta de requisições AJAX
+$isAjaxRequest = (
+    $_SERVER['REQUEST_METHOD'] == 'POST' && 
+    (
+        isset($_POST['update_empenho']) || 
+        isset($_POST['update_classificacao']) || 
+        isset($_POST['delete_empenho_id']) ||
+        (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ||
+        (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+    )
+);
+
+// Se for requisição AJAX, configura headers e limpa buffer
+if ($isAjaxRequest) {
+    // Limpa qualquer output anterior
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Inicia novo buffer limpo
+    ob_start();
+    
+    // Define headers JSON obrigatórios
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    
+    // Desabilita qualquer output HTML
+    ini_set('html_errors', 0);
+} else {
+    // Para requisições normais, inicia buffer normal
+    ob_start();
+}
+
 session_start();
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -35,13 +70,12 @@ $paginaAtual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
 $offset = ($paginaAtual - 1) * $itensPorPagina;
 
 // ===========================================
-// PROCESSAMENTO AJAX - ATUALIZAÇÃO COMPLETA DO EMPENHO
+// PROCESSAMENTO AJAX - ATUALIZAÇÃO COMPLETA DO EMPENHO - CORRIGIDO
 // ===========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_empenho'])) {
-    header('Content-Type: application/json');
     
     if (!$permissionManager->hasPagePermission('empenhos', 'edit')) {
-        echo json_encode(['error' => 'Sem permissão para editar empenhos']);
+        echo json_encode(['error' => 'Sem permissão para editar empenhos'], JSON_UNESCAPED_UNICODE);
         exit();
     }
     
@@ -75,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_empenho'])) {
             'observacao' => trim(filter_input(INPUT_POST, 'observacao', FILTER_SANITIZE_STRING)),
             'cnpj' => trim(filter_input(INPUT_POST, 'cnpj', FILTER_SANITIZE_STRING)),
             'data' => filter_input(INPUT_POST, 'data', FILTER_SANITIZE_STRING),
-            'valor_total_empenho' => str_replace(',', '.', filter_input(INPUT_POST, 'valor_total_empenho'))
+            'valor_total_empenho' => str_replace(',', '.', filter_input(INPUT_POST, 'valor_total_empenho') ?: '0')
         ];
 
         // Validações básicas
@@ -146,21 +180,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_empenho'])) {
             }
         }
 
-        logUserAction('UPDATE', 'empenhos', $id, [
-            'old' => $old_data,
-            'new' => $dados
-        ]);
+        if (function_exists('logUserAction')) {
+            logUserAction('UPDATE', 'empenhos', $id, [
+                'old' => $old_data,
+                'new' => $dados
+            ]);
+        }
 
         $pdo->commit();
         $response['success'] = true;
         $response['message'] = "Empenho atualizado com sucesso!";
         
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $response['error'] = $e->getMessage();
     }
 
-    echo json_encode($response);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit();
 }
 
@@ -3101,17 +3139,33 @@ function renderEmpenhoDetailsComplete(empenho) {
                     <div class="detail-content">
                         <div class="detail-grid">
                             <div class="detail-item">
-                                <div class="detail-label">Nome do Cliente *</div>
-                                <input type="text" name="cliente_nome" class="form-control" value="${empenho.cliente_nome || ''}" required>
-                            </div>
+    <div class="detail-item">
+    <div class="detail-label">Nome do Cliente *</div>
+    <div class="autocomplete-container-cliente">
+        <div style="position: relative;">
+            <input type="text" 
+                   name="cliente_nome" 
+                   id="clienteNomeEdit"
+                   class="form-control" 
+                   value="${empenho.cliente_nome || ''}" 
+                   placeholder="Digite o nome do cliente, UASG ou CNPJ..."
+                   autocomplete="off"
+                   required
+                   data-autocomplete="true"
+                   data-suggestions-id="clienteEditSuggestions">
+            <div id="clienteEditSuggestions" class="suggestions-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid var(--secondary-color); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+        </div>
+        <div id="clienteInfoContainer" style="display: none; margin-top: 1rem;"></div>
+    </div>
+</div>
                             <div class="detail-item">
-                                <div class="detail-label">UASG</div>
-                                <input type="text" name="cliente_uasg" class="form-control" value="${empenho.cliente_uasg || ''}">
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">CNPJ</div>
-                                <input type="text" name="cnpj" class="form-control" value="${empenho.cnpj || ''}" maxlength="18">
-                            </div>
+    <div class="detail-label">UASG</div>
+    <input type="text" name="cliente_uasg" id="clienteUasgEdit" class="form-control" value="${empenho.cliente_uasg || ''}">
+</div>
+<div class="detail-item">
+    <div class="detail-label">CNPJ</div>
+    <input type="text" name="cnpj" id="clienteCnpjEdit" class="form-control" value="${empenho.cnpj || ''}" maxlength="18">
+</div>
                         </div>
                     </div>
                 </div>
@@ -3293,11 +3347,16 @@ function renderEmpenhoDetailsComplete(empenho) {
         </button>
     `;
 
-    // Configura event listeners
-    configurarEventListeners();
-    
-    // Carrega os produtos do empenho
-    carregarProdutosEmpenhoCompleto(empenho.id);
+  configurarEventListenersModal();
+
+// Backup com timeout caso necessário
+setTimeout(() => {
+    configurarEventListenersModal();
+    console.log('🔧 Event listeners configurados com timeout de backup');
+}, 200);
+
+// Carrega os produtos do empenho
+carregarProdutosEmpenhoCompleto(empenho.id);
     
     // Atualiza a visibilidade do botão "Vender"
     updateVenderButtonVisibility();
@@ -3403,6 +3462,85 @@ function carregarProdutosEmpenhoCompleto(empenhoId) {
             if (produtosVisualizacao) produtosVisualizacao.innerHTML = errorHtml;
             if (produtosEdicao) produtosEdicao.innerHTML = errorHtml;
         });
+}
+
+/**
+ * Handler específico para clique direto no botão salvar (fallback)
+ */
+function handleSalvarClickModal(event) {
+    console.log('🖱️ Clique direto detectado no botão salvar do modal');
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const form = document.getElementById('empenhoEditForm');
+    if (form) {
+        console.log('📝 Disparando submit do formulário via clique do botão...');
+        
+        // Cria e dispara evento de submit
+        const submitEvent = new Event('submit', { 
+            bubbles: true, 
+            cancelable: true 
+        });
+        
+        // Chama diretamente a função se o evento não funcionar
+        setTimeout(() => {
+            salvarEdicaoCompleta({
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                target: form
+            });
+        }, 50);
+        
+        form.dispatchEvent(submitEvent);
+    } else {
+        console.error('❌ Formulário não encontrado no clique do botão');
+        showToast('Erro: Formulário não encontrado', 'error');
+    }
+}
+
+/**
+ * Configura event listeners específicos para campos de produto
+ */
+function configurarEventListenersProduto() {
+    const quantidadeInput = document.getElementById('produtoQuantidade');
+    const valorUnitarioInput = document.getElementById('produtoValorUnitario');
+    
+    if (quantidadeInput) {
+        quantidadeInput.removeEventListener('input', calcularValorTotalProduto);
+        quantidadeInput.addEventListener('input', calcularValorTotalProduto);
+        
+        quantidadeInput.removeEventListener('blur', validarQuantidade);
+        quantidadeInput.addEventListener('blur', validarQuantidade);
+    }
+    
+    if (valorUnitarioInput) {
+        valorUnitarioInput.removeEventListener('input', calcularValorTotalProduto);
+        valorUnitarioInput.addEventListener('input', calcularValorTotalProduto);
+        
+        valorUnitarioInput.removeEventListener('blur', validarValorUnitario);
+        valorUnitarioInput.addEventListener('blur', validarValorUnitario);
+    }
+}
+
+/**
+ * Valida campo quantidade
+ */
+function validarQuantidade() {
+    if (!this.value || this.value === '0') {
+        this.value = '1';
+        calcularValorTotalProduto();
+    }
+}
+
+/**
+ * Valida campo valor unitário
+ */
+function validarValorUnitario() {
+    let valor = parseFloat(this.value);
+    if (!isNaN(valor) && valor >= 0) {
+        this.value = valor.toFixed(2);
+        calcularValorTotalProduto();
+    }
 }
 
 /**
@@ -3691,30 +3829,82 @@ function atualizarContadorProdutos() {
  * Ativa o modo de edição completo - CORRIGIDO para ativar produtos automaticamente
  */
 function editarEmpenhoCompleto() {
-    console.log('🖊️ Ativando modo de edição completo');
+    console.log('🖊️ ATIVANDO MODO DE EDIÇÃO COMPLETO - DEBUG ATIVO');
     
-    const viewMode = document.getElementById('empenhoViewMode');
-    const editForm = document.getElementById('empenhoEditForm');
-    const editarBtn = document.getElementById('editarBtn');
-    
-    if (viewMode) viewMode.style.display = 'none';
-    if (editForm) editForm.style.display = 'block';
-    if (editarBtn) editarBtn.style.display = 'none';
-    
-    modoEdicaoAtivo = true;
-    modoGestãoProdutos = true; // ATIVA AUTOMATICAMENTE o modo de gestão de produtos
-    
-    // Recarrega produtos no modo edição
-    carregarProdutosEmpenhoCompleto(currentEmpenhoId);
-    
-    // Atualiza botão de gestão
-    const toggleBtn = document.getElementById('toggleProdutosBtn');
-    if (toggleBtn) {
-        toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Visualizar';
-        toggleBtn.className = 'btn btn-info btn-sm';
+    try {
+        const viewMode = document.getElementById('empenhoViewMode');
+        const editForm = document.getElementById('empenhoEditForm');
+        const editarBtn = document.getElementById('editarBtn');
+        
+        console.log('Elementos encontrados:', {
+            viewMode: !!viewMode,
+            editForm: !!editForm,
+            editarBtn: !!editarBtn
+        });
+        
+        if (viewMode) viewMode.style.display = 'none';
+        if (editForm) editForm.style.display = 'block';
+        if (editarBtn) editarBtn.style.display = 'none';
+        
+        modoEdicaoAtivo = true;
+        modoGestãoProdutos = true;
+        
+        // Força configuração dos event listeners
+        setTimeout(() => {
+            try {
+                configurarEventListenersModal();
+                
+                // Verifica se os elementos do autocomplete existem antes de inicializar
+                const clienteInput = document.getElementById('clienteNomeEdit');
+                const suggestionsContainer = document.getElementById('clienteEditSuggestions');
+                
+                console.log('Elementos do autocomplete:', {
+                    clienteInput: !!clienteInput,
+                    suggestionsContainer: !!suggestionsContainer
+                });
+                
+                if (clienteInput && suggestionsContainer) {
+                    initClienteAutoCompleteEdit();
+                    console.log('✅ Autocomplete inicializado com sucesso');
+                } else {
+                    console.warn('⚠️ Elementos do autocomplete não encontrados, tentando novamente...');
+                    
+                    // Tenta novamente após mais um tempo
+                    setTimeout(() => {
+                        const clienteInput2 = document.getElementById('clienteNomeEdit');
+                        const suggestionsContainer2 = document.getElementById('clienteEditSuggestions');
+                        
+                        if (clienteInput2 && suggestionsContainer2) {
+                            initClienteAutoCompleteEdit();
+                            console.log('✅ Autocomplete inicializado na segunda tentativa');
+                        } else {
+                            console.error('❌ Elementos do autocomplete ainda não encontrados');
+                        }
+                    }, 500);
+                }
+                
+                console.log('🔧 Event listeners e autocomplete configurados');
+            } catch (error) {
+                console.error('❌ Erro ao configurar listeners:', error);
+            }
+        }, 200);
+        
+        // Recarrega produtos no modo edição
+        carregarProdutosEmpenhoCompleto(currentEmpenhoId);
+        
+        // Atualiza botão de gestão
+        const toggleBtn = document.getElementById('toggleProdutosBtn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Visualizar';
+            toggleBtn.className = 'btn btn-info btn-sm';
+        }
+        
+        showToast('Modo de edição ativado - Gestão de produtos habilitada automaticamente', 'info', 5000);
+        
+    } catch (error) {
+        console.error('❌ Erro na função editarEmpenhoCompleto:', error);
+        showToast('Erro ao ativar modo de edição: ' + error.message, 'error');
     }
-    
-    showToast('Modo de edição ativado - Gestão de produtos habilitada automaticamente', 'info', 5000);
 }
 
 /**
@@ -3792,53 +3982,94 @@ function toggleGestãoProdutos() {
  * Salva todas as alterações do empenho - CORRIGIDO
  */
 function salvarEdicaoCompleta(event) {
-    event.preventDefault();
+    console.log('💾 INICIANDO SALVAMENTO DO EMPENHO');
     
-    const form = event.target;
+    if (event && event.preventDefault) {
+        event.preventDefault();
+    }
+    if (event && event.stopPropagation) {
+        event.stopPropagation();
+    }
+    
+    const form = event.target || document.getElementById('empenhoEditForm');
+    if (!form) {
+        console.error('❌ ERRO: Formulário não encontrado!');
+        showToast('Erro: Formulário não encontrado', 'error');
+        return;
+    }
+    
+    // Validação de campos obrigatórios
+    const camposObrigatorios = form.querySelectorAll('input[required], select[required]');
+    let camposVazios = [];
+
+    camposObrigatorios.forEach(campo => {
+        if (campo.offsetParent !== null && !campo.value.trim()) {
+            camposVazios.push(campo.name || campo.id);
+        }
+    });
+    
+    if (camposVazios.length > 0) {
+        console.warn('⚠️ Campos obrigatórios vazios:', camposVazios);
+        showToast(`Preencha os campos obrigatórios: ${camposVazios.join(', ')}`, 'warning');
+        return;
+    }
+    
     const formData = new FormData(form);
     const submitBtn = document.getElementById('salvarEdicaoBtn');
     
     // Desabilita o botão e mostra loading
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando todas as alterações...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
     
-    fetch('consulta_empenho.php', {
+    showToast('Salvando alterações...', 'info', 2000);
+    
+    // CORREÇÃO: Usar a mesma página com identificação AJAX
+    fetch(window.location.pathname, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📡 Status da resposta:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            return response.text().then(text => {
+                console.error('Resposta não-JSON recebida:', text.substring(0, 500));
+                throw new Error('Resposta inválida do servidor');
+            });
+        }
+        
+        return response.json();
+    })
     .then(data => {
+        console.log('✅ Dados recebidos:', data);
+        
         if (data.success) {
             showToast('Empenho atualizado com sucesso!', 'success');
             
-            // Reset flags
             produtosAlterados = false;
             
-            // Atualiza dados locais com valores do formulário
-const formDataObj = {};
-for (let [key, value] of formData.entries()) {
-    formDataObj[key] = value;
-}
-currentEmpenhoData = {...currentEmpenhoData, ...formDataObj};
-
-// Atualiza especificamente os campos que foram alterados
-currentEmpenhoData.numero = formDataObj.numero || currentEmpenhoData.numero;
-currentEmpenhoData.cliente_nome = formDataObj.cliente_nome || currentEmpenhoData.cliente_nome;
-currentEmpenhoData.classificacao = formDataObj.classificacao || currentEmpenhoData.classificacao;
-currentEmpenhoData.prioridade = formDataObj.prioridade || currentEmpenhoData.prioridade;
-            
-            // Recarrega os dados do modal
+            // Recarrega o modal após 1.5 segundos
             setTimeout(() => {
+                console.log('🔄 Recarregando modal...');
                 openModal(currentEmpenhoId);
                 
                 // Atualiza a página se necessário
-                if (window.location.href.includes('consulta_empenho.php')) {
-                    setTimeout(() => {
+                setTimeout(() => {
+                    if (window.location.href.includes('consulta_empenho.php')) {
                         window.location.reload();
-                    }, 2000);
-                }
+                    }
+                }, 2000);
             }, 1500);
             
         } else {
@@ -3846,7 +4077,7 @@ currentEmpenhoData.prioridade = formDataObj.prioridade || currentEmpenhoData.pri
         }
     })
     .catch(error => {
-        console.error('Erro ao salvar empenho:', error);
+        console.error('❌ Erro ao salvar empenho:', error);
         showToast('Erro ao salvar: ' + error.message, 'error');
     })
     .finally(() => {
@@ -4590,21 +4821,79 @@ function buscarProdutosCatalogo() {
 // ===========================================
 
 /**
- * Configura todos os event listeners do sistema
+ * Configura event listeners específicos do modal após renderização
  */
-function configurarEventListeners() {
-    console.log('🔧 Configurando event listeners do sistema...');
+function configurarEventListenersModal() {
+    console.log('🔧 Configurando event listeners específicos do modal...');
     
-    // Formulário principal de edição
+    // Formulário principal de edição - COM VERIFICAÇÃO DE EXISTÊNCIA
     const editForm = document.getElementById('empenhoEditForm');
     if (editForm) {
+        console.log('✅ Formulário encontrado, configurando event listener...');
+        
+        // Remove qualquer event listener anterior
+        editForm.removeEventListener('submit', salvarEdicaoCompleta);
+        
+        // Adiciona novo event listener
         editForm.addEventListener('submit', salvarEdicaoCompleta);
+        
+        console.log('✅ Event listener do formulário de edição configurado');
+    } else {
+        console.warn('⚠️ Formulário empenhoEditForm não encontrado');
+    }
+
+    // Event listener direto no botão de salvar como FALLBACK
+    const salvarBtn = document.getElementById('salvarEdicaoBtn');
+    if (salvarBtn) {
+        console.log('✅ Botão salvar encontrado, configurando fallback...');
+        
+        // Remove listener anterior
+        salvarBtn.removeEventListener('click', handleSalvarClickModal);
+        
+        // Adiciona listener de clique direto
+        salvarBtn.addEventListener('click', handleSalvarClickModal);
+        
+        console.log('✅ Event listener fallback do botão salvar configurado');
+    } else {
+        console.warn('⚠️ Botão salvarEdicaoBtn não encontrado');
     }
 
     // Formulário de produto
     const formProduto = document.getElementById('formProduto');
     if (formProduto) {
+        formProduto.removeEventListener('submit', salvarProduto);
         formProduto.addEventListener('submit', salvarProduto);
+        console.log('✅ Event listener do formulário de produto configurado');
+    }
+
+    // Event listeners para campos de produto
+    configurarEventListenersProduto();
+    
+    console.log('✅ Todos os event listeners do modal configurados');
+}
+
+/**
+ * Configura todos os event listeners do sistema
+ */
+function configurarEventListeners() {
+    console.log('🔧 Configurando event listeners do sistema...');
+    
+    // Remove event listeners anteriores para evitar duplicação
+    const editForm = document.getElementById('empenhoEditForm');
+    if (editForm) {
+        // Remove event listener anterior se existir
+        editForm.removeEventListener('submit', salvarEdicaoCompleta);
+        // Adiciona novo event listener
+        editForm.addEventListener('submit', salvarEdicaoCompleta);
+        console.log('✅ Event listener do formulário de edição configurado');
+    }
+
+    // Formulário de produto
+    const formProduto = document.getElementById('formProduto');
+    if (formProduto) {
+        formProduto.removeEventListener('submit', salvarProduto);
+        formProduto.addEventListener('submit', salvarProduto);
+        console.log('✅ Event listener do formulário de produto configurado');
     }
 
     // Máscara para CNPJ no modo edição
@@ -4653,10 +4942,48 @@ function configurarEventListeners() {
         initProdutoAutoComplete();
         console.log('🔍 Autocomplete inicializado para campo de produto');
     }
+
+    // Inicializa autocomplete para clientes se o campo existir
+    const clienteNomeInput = document.getElementById('clienteNomeEdit');
+    if (clienteNomeInput) {
+        initClienteAutoComplete();
+        console.log('🔍 Autocomplete inicializado para campo de cliente');
+    
     
     console.log('✅ Event listeners configurados com sucesso');
 }
+    
+    console.log('✅ Event listeners configurados com sucesso');
+}
+function configurarBotaoSalvarFallback() {
+    const salvarBtn = document.getElementById('salvarEdicaoBtn');
+    if (salvarBtn) {
+        salvarBtn.removeEventListener('click', handleSalvarClick);
+        salvarBtn.addEventListener('click', handleSalvarClick);
+        console.log('✅ Event listener fallback do botão salvar configurado');
+    }
+}
 
+/**
+ * Handler direto para clique no botão salvar
+ */
+function handleSalvarClick(event) {
+    console.log('🖱️ Clique direto no botão salvar detectado');
+    event.preventDefault();
+    
+    const form = document.getElementById('empenhoEditForm');
+    if (form) {
+        // Dispara o evento de submit do formulário
+        const submitEvent = new Event('submit', { 
+            bubbles: true, 
+            cancelable: true 
+        });
+        form.dispatchEvent(submitEvent);
+    } else {
+        console.error('❌ Formulário não encontrado');
+        showToast('Erro: Formulário não encontrado', 'error');
+    }
+}
 /**
  * Abre o formulário de produto - VERSÃO ATUALIZADA
  */
@@ -5556,6 +5883,586 @@ window.addEventListener('unhandledrejection', function(e) {
     console.error('Promise rejeitada:', e.reason);
     showToast('Erro ao processar requisição', 'error');
 });
+
+// ===========================================
+// SISTEMA DE AUTOCOMPLETE PARA CLIENTES
+// ===========================================
+
+let clienteSearchTimeout = null;
+let clienteSuggestionsVisible = false;
+let selectedClienteIndex = -1;
+let clientesSugeridos = [];
+
+/**
+ * Inicializa o autocomplete para clientes
+ */
+function initClienteAutoComplete() {
+    const inputElement = document.getElementById('clienteNomeEdit');
+    const suggestionsContainer = document.getElementById('clienteSuggestions');
+    
+    if (!inputElement || !suggestionsContainer) {
+        console.warn('Elementos do autocomplete de cliente não encontrados');
+        return;
+    }
+
+    let selectedIndex = -1;
+    
+    // Event listeners
+    inputElement.addEventListener('input', function(e) {
+        clearTimeout(clienteSearchTimeout);
+        const termo = e.target.value.trim();
+        
+        if (termo.length < 2) {
+            hideClienteSuggestions();
+            limparClienteSelecionado();
+            return;
+        }
+        
+        // Mostra indicador de loading
+        inputElement.style.backgroundImage = "url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A//www.w3.org/2000/svg%22 width%3D%2216%22 height%3D%2216%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22%23999%22 d%3D%22M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2z%22/%3E%3C/svg%3E')";
+        inputElement.style.backgroundRepeat = 'no-repeat';
+        inputElement.style.backgroundPosition = 'right 10px center';
+        inputElement.style.backgroundSize = '16px';
+        
+        clienteSearchTimeout = setTimeout(() => {
+            buscarClientes(termo);
+        }, 300);
+    });
+    
+    inputElement.addEventListener('keydown', function(e) {
+        if (!clienteSuggestionsVisible) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const termo = this.value.trim();
+                if (termo.length >= 2) {
+                    buscarClienteExato(termo);
+                }
+            }
+            return;
+        }
+        
+        const suggestions = suggestionsContainer.querySelectorAll('.cliente-suggestion-item');
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+                updateClienteSelection(suggestions);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateClienteSelection(suggestions);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                    suggestions[selectedIndex].click();
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                hideClienteSuggestions();
+                break;
+        }
+    });
+    
+    inputElement.addEventListener('blur', function() {
+        setTimeout(() => {
+            hideClienteSuggestions();
+        }, 200);
+    });
+    
+    inputElement.addEventListener('focus', function() {
+        const termo = this.value.trim();
+        if (termo.length >= 2 && clientesSugeridos.length > 0) {
+            mostrarClienteSuggestions(clientesSugeridos);
+        }
+    });
+
+    /**
+ * Inicializa o autocomplete para clientes no modo de edição
+ */
+function initClienteAutoCompleteEdit() {
+    const inputElement = document.getElementById('clienteNomeEdit');
+    const suggestionsContainer = document.getElementById('clienteEditSuggestions');
+    
+    if (!inputElement || !suggestionsContainer) {
+        console.warn('Elementos do autocomplete de edição não encontrados');
+        return;
+    }
+
+    let isVisible = false;
+    let selectedIndex = -1;
+    let clientesSugeridos = [];
+    let searchTimeout = null;
+    
+    console.log('🔍 Inicializando autocomplete de cliente para edição');
+    
+    // Remove listeners anteriores se existirem
+    inputElement.removeEventListener('input', handleEditClienteInput);
+    inputElement.removeEventListener('keydown', handleEditClienteKeydown);
+    inputElement.removeEventListener('focus', handleEditClienteFocus);
+    inputElement.removeEventListener('blur', handleEditClienteBlur);
+    
+    // Event listeners
+    inputElement.addEventListener('input', handleEditClienteInput);
+    inputElement.addEventListener('keydown', handleEditClienteKeydown);
+    inputElement.addEventListener('focus', handleEditClienteFocus);
+    inputElement.addEventListener('blur', handleEditClienteBlur);
+    
+    function handleEditClienteInput(e) {
+        clearTimeout(searchTimeout);
+        const termo = e.target.value.trim();
+        
+        if (termo.length < 2) {
+            hideEditSuggestions();
+            return;
+        }
+        
+        inputElement.style.backgroundImage = "url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A//www.w3.org/2000/svg%22 width%3D%2216%22 height%3D%2216%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22%23999%22 d%3D%22M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2z%22/%3E%3C/svg%3E')";
+        inputElement.style.backgroundRepeat = 'no-repeat';
+        inputElement.style.backgroundPosition = 'right 10px center';
+        inputElement.style.backgroundSize = '16px';
+        
+        searchTimeout = setTimeout(() => {
+            buscarClientesEdit(termo);
+        }, 250);
+    }
+    
+    function handleEditClienteKeydown(e) {
+        if (!isVisible) return;
+        
+        const suggestions = suggestionsContainer.querySelectorAll('.cliente-suggestion-item');
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+                updateEditSelection(suggestions);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateEditSelection(suggestions);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                    suggestions[selectedIndex].click();
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                hideEditSuggestions();
+                break;
+        }
+    }
+    
+    function handleEditClienteFocus(e) {
+        const termo = e.target.value.trim();
+        if (termo.length >= 2 && clientesSugeridos.length > 0) {
+            mostrarEditSugestoes(clientesSugeridos);
+        }
+    }
+    
+    function handleEditClienteBlur(e) {
+        setTimeout(() => {
+            hideEditSuggestions();
+        }, 200);
+    }
+    
+    function updateEditSelection(suggestions) {
+        suggestions.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.style.background = 'var(--secondary-color)';
+                item.style.color = 'white';
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.style.background = 'white';
+                item.style.color = 'inherit';
+            }
+        });
+    }
+    
+    function buscarClientesEdit(termo) {
+        console.log('🔍 Buscando clientes para edição, termo:', termo);
+        
+        fetch(`buscar_clientes_autocomplete.php?termo=${encodeURIComponent(termo)}&limit=8&t=${Date.now()}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('📦 Resposta da busca de clientes:', data);
+                
+                if (data.success && data.clientes && data.clientes.length > 0) {
+                    clientesSugeridos = data.clientes;
+                    mostrarEditSugestoes(data.clientes);
+                } else {
+                    hideEditSuggestions();
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar clientes:', error);
+                hideEditSuggestions();
+            })
+            .finally(() => {
+                inputElement.style.backgroundImage = '';
+            });
+    }
+    
+    function mostrarEditSugestoes(clientes) {
+        if (!clientes || clientes.length === 0) {
+            hideEditSuggestions();
+            return;
+        }
+        
+        selectedIndex = -1;
+        
+        let html = '';
+        clientes.forEach((cliente, index) => {
+            html += `
+                <div class="cliente-suggestion-item" 
+                     onclick="selecionarClienteEdit(${index})" 
+                     data-index="${index}"
+                     style="padding: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: all 0.2s ease;"
+                     onmouseover="this.style.background='var(--light-gray)';" 
+                     onmouseout="this.style.background='white';">
+                    
+                    <div style="font-weight: 600; color: var(--primary-color); margin-bottom: 0.25rem;">
+                        ${cliente.nome_orgaos || 'Cliente sem nome'}
+                    </div>
+                    
+                    <div style="font-size: 0.85rem; color: var(--medium-gray); display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <span><i class="fas fa-hashtag" style="width: 12px;"></i> UASG: ${cliente.uasg || 'N/A'}</span>
+                        ${cliente.cnpj ? `<span><i class="fas fa-id-card" style="width: 12px;"></i> ${formatCNPJ(cliente.cnpj)}</span>` : ''}
+                        ${cliente.telefone ? `<span><i class="fas fa-phone" style="width: 12px;"></i> ${formatPhone(cliente.telefone)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        suggestionsContainer.innerHTML = html;
+        suggestionsContainer.style.display = 'block';
+        isVisible = true;
+        
+        console.log(`✅ Mostrando ${clientes.length} sugestões de clientes para edição`);
+    }
+    
+    function hideEditSuggestions() {
+        if (suggestionsContainer) {
+            suggestionsContainer.style.display = 'none';
+        }
+        isVisible = false;
+        selectedIndex = -1;
+    }
+    
+    // Torna a função de seleção disponível globalmente
+    window.selecionarClienteEdit = function(index) {
+        const cliente = clientesSugeridos[index];
+        if (!cliente) return;
+        
+        console.log('✅ Cliente selecionado para edição:', cliente);
+        
+        // Preenche o campo de nome
+        inputElement.value = cliente.nome_orgaos || '';
+        
+        // Preenche UASG
+        const uasgField = document.getElementById('clienteUasgEdit');
+        if (uasgField) {
+            uasgField.value = cliente.uasg || '';
+        }
+        
+        // Preenche CNPJ
+        const cnpjField = document.getElementById('clienteCnpjEdit');
+        if (cnpjField && cliente.cnpj) {
+            cnpjField.value = cliente.cnpj;
+        }
+        
+        hideEditSuggestions();
+        showToast(`Cliente selecionado: ${cliente.nome_orgaos}`, 'success', 2000);
+    };
+    
+    console.log('✅ Autocomplete de cliente para edição inicializado');
+}
+    
+    function updateClienteSelection(suggestions) {
+        suggestions.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.style.background = 'var(--secondary-color)';
+                item.style.color = 'white';
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.style.background = 'white';
+                item.style.color = 'inherit';
+            }
+        });
+    }
+    
+    console.log('✅ Autocomplete de clientes inicializado');
+}
+
+/**
+ * Busca clientes
+ */
+function buscarClientes(termo) {
+    console.log('🔍 Buscando clientes para termo:', termo);
+    
+    fetch(`buscar_clientes_autocomplete.php?termo=${encodeURIComponent(termo)}&limit=8&t=${Date.now()}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.clientes && data.clientes.length > 0) {
+                clientesSugeridos = data.clientes;
+                mostrarClienteSuggestions(data.clientes);
+            } else {
+                hideClienteSuggestions();
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar clientes:', error);
+            hideClienteSuggestions();
+        })
+        .finally(() => {
+            const inputElement = document.getElementById('clienteNomeEdit');
+            if (inputElement) {
+                inputElement.style.backgroundImage = '';
+            }
+        });
+}
+
+/**
+ * Mostra sugestões de clientes
+ */
+function mostrarClienteSuggestions(clientes) {
+    const suggestionsContainer = document.getElementById('clienteSuggestions');
+    if (!suggestionsContainer || !clientes || clientes.length === 0) {
+        hideClienteSuggestions();
+        return;
+    }
+    
+    selectedClienteIndex = -1;
+    
+    let html = '';
+    clientes.forEach((cliente, index) => {
+        html += `
+            <div class="cliente-suggestion-item" 
+                 onclick="selecionarCliente(${cliente.id})" 
+                 data-index="${index}"
+                 style="
+                    padding: 0.75rem; 
+                    cursor: pointer; 
+                    border-bottom: 1px solid var(--border-color); 
+                    transition: all 0.2s ease;
+                 "
+                 onmouseover="this.style.background='var(--light-gray)'; selectedClienteIndex=${index};" 
+                 onmouseout="this.style.background='white';">
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.25rem;">
+                    <div style="font-weight: 600; color: var(--primary-color); flex: 1;">
+                        ${cliente.nome}
+                    </div>
+                </div>
+                
+                <div style="font-size: 0.85rem; color: var(--medium-gray); margin-bottom: 0.5rem;">
+                    <span><i class="fas fa-hashtag" style="width: 12px;"></i> UASG: ${cliente.uasg || 'N/A'}</span>
+                    ${cliente.cnpj_formatado ? ` | <i class="fas fa-id-card" style="width: 12px;"></i> ${cliente.cnpj_formatado}` : ''}
+                </div>
+                
+                ${cliente.endereco ? `
+                <div style="font-size: 0.8rem; color: var(--medium-gray); display: flex; align-items: center; gap: 0.25rem;">
+                    <i class="fas fa-map-marker-alt" style="color: var(--info-color);"></i>
+                    ${cliente.endereco_resumido || cliente.endereco}
+                </div>
+                ` : ''}
+                
+                ${cliente.telefone_formatado ? `
+                <div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <i class="fas fa-phone" style="color: var(--success-color);"></i>
+                    ${cliente.telefone_formatado}
+                </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    suggestionsContainer.innerHTML = html;
+    suggestionsContainer.style.display = 'block';
+    clienteSuggestionsVisible = true;
+    
+    console.log(`✅ Mostrando ${clientes.length} sugestões de clientes`);
+}
+
+/**
+ * Seleciona cliente
+ */
+function selecionarCliente(clienteId) {
+    console.log('🔍 Selecionando cliente ID:', clienteId);
+    
+    const clienteExistente = clientesSugeridos.find(c => c.id == clienteId);
+    
+    if (clienteExistente) {
+        preencherFormularioCliente(clienteExistente);
+        hideClienteSuggestions();
+        return;
+    }
+    
+    fetch(`buscar_clientes_autocomplete.php?cliente_id=${clienteId}&t=${Date.now()}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.cliente) {
+                preencherFormularioCliente(data.cliente);
+                hideClienteSuggestions();
+            } else {
+                throw new Error(data.error || 'Cliente não encontrado');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao buscar cliente:', error);
+            showToast('Erro ao carregar cliente: ' + error.message, 'error');
+            hideClienteSuggestions();
+        });
+}
+
+/**
+ * Preenche formulário com cliente selecionado
+ */
+function preencherFormularioCliente(cliente) {
+    console.log('📝 Preenchendo formulário com cliente:', cliente);
+    
+    try {
+        const clienteNomeField = document.getElementById('clienteNomeEdit');
+        const clienteUasgField = document.getElementById('clienteUasgEdit');
+        const clienteCnpjField = document.getElementById('clienteCnpjEdit');
+        
+        if (clienteNomeField) clienteNomeField.value = cliente.nome || '';
+        if (clienteUasgField) clienteUasgField.value = cliente.uasg || '';
+        if (clienteCnpjField) clienteCnpjField.value = cliente.cnpj_formatado || cliente.cnpj || '';
+        
+        // Mostra informações do cliente
+        mostrarInformacoesClienteCompletas(cliente);
+        
+        showToast(`✅ Cliente "${cliente.nome}" selecionado`, 'success', 2000);
+        
+        console.log('✅ Formulário preenchido com sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao preencher formulário:', error);
+        showToast('Erro ao preencher formulário do cliente', 'error');
+    }
+}
+
+/**
+ * Mostra informações detalhadas do cliente
+ */
+function mostrarInformacoesClienteCompletas(cliente) {
+    let infoContainer = document.getElementById('clienteInfoContainer');
+    if (!infoContainer) return;
+
+    let infoHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; padding: 1rem; background: rgba(0, 191, 174, 0.05); border-radius: var(--radius-sm); border: 1px solid rgba(0, 191, 174, 0.2);">';
+    
+    if (cliente.uasg) {
+        infoHtml += `
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-hashtag" style="color: var(--secondary-color); width: 16px;"></i>
+                <span style="color: var(--medium-gray);">UASG:</span>
+                <strong style="color: var(--primary-color);">${cliente.uasg}</strong>
+            </div>
+        `;
+    }
+    
+    if (cliente.cnpj_formatado) {
+        infoHtml += `
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-id-card" style="color: var(--info-color); width: 16px;"></i>
+                <span style="color: var(--medium-gray);">CNPJ:</span>
+                <strong style="color: var(--info-color);">${cliente.cnpj_formatado}</strong>
+            </div>
+        `;
+    }
+    
+    if (cliente.telefone) {
+        infoHtml += `
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-phone" style="color: var(--success-color); width: 16px;"></i>
+                <span style="color: var(--medium-gray);">Telefone:</span>
+                <strong style="color: var(--success-color);">${cliente.telefone}</strong>
+            </div>
+        `;
+    }
+    
+    if (cliente.email) {
+        infoHtml += `
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-envelope" style="color: var(--warning-color); width: 16px;"></i>
+                <span style="color: var(--medium-gray);">E-mail:</span>
+                <strong style="color: var(--warning-color);">${cliente.email}</strong>
+            </div>
+        `;
+    }
+    
+    infoHtml += '</div>';
+    
+    if (cliente.endereco) {
+        infoHtml += `
+            <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--light-gray); border-radius: var(--radius-sm); border-left: 3px solid var(--info-color);">
+                <div style="display: flex; align-items: flex-start; gap: 6px;">
+                    <i class="fas fa-map-marker-alt" style="color: var(--info-color); margin-top: 2px;"></i>
+                    <div>
+                        <span style="color: var(--medium-gray); font-size: 0.85rem; font-weight: 600;">Endereço:</span>
+                        <div style="color: var(--dark-gray); margin-top: 0.25rem;">${cliente.endereco}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    infoContainer.innerHTML = infoHtml;
+    infoContainer.style.display = 'block';
+    
+    // Anima a entrada
+    infoContainer.style.opacity = '0';
+    infoContainer.style.transform = 'translateY(-10px)';
+    
+    setTimeout(() => {
+        infoContainer.style.transition = 'all 0.3s ease';
+        infoContainer.style.opacity = '1';
+        infoContainer.style.transform = 'translateY(0)';
+    }, 50);
+}
+
+/**
+ * Esconde sugestões de clientes
+ */
+function hideClienteSuggestions() {
+    const suggestionsContainer = document.getElementById('clienteSuggestions');
+    if (suggestionsContainer) {
+        suggestionsContainer.style.display = 'none';
+    }
+    clienteSuggestionsVisible = false;
+    selectedClienteIndex = -1;
+}
+
+/**
+ * Limpa cliente selecionado
+ */
+function limparClienteSelecionado() {
+    const infoContainer = document.getElementById('clienteInfoContainer');
+    if (infoContainer) {
+        infoContainer.style.display = 'none';
+        infoContainer.innerHTML = '';
+    }
+}
+
+// Expor função globalmente
+window.selecionarCliente = selecionarCliente;
 </script>
 </body>
 </html>
@@ -5580,6 +6487,9 @@ if (function_exists('logUserAction')) {
 // Cleanup de sessão se necessário
 if (isset($_SESSION['temp_data'])) {
     unset($_SESSION['temp_data']);
+}
+if (ob_get_level()) {
+    ob_end_flush();
 }
 
 // Não incluir ?> no final para evitar whitespace issues

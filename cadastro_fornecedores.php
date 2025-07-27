@@ -34,12 +34,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
         // Captura e sanitiza os dados do formulário
         $codigo = trim($_POST['codigo']);
-        $cnpj = trim($_POST['cnpj']);
         $nome = trim($_POST['nome']);
         $endereco = trim($_POST['endereco']) ?? null;
         $telefone = trim($_POST['telefone']) ?? null;
         $email = trim($_POST['email']) ?? null;
         $observacoes = trim($_POST['observacoes']) ?? null;
+
+        // Captura tipo de pessoa
+        $tipo_pessoa = trim($_POST['tipo_pessoa']) ?? 'PJ';
+        
+        // Captura documentos
+        $cnpj = null;
+        $cpf = null;
+        
+        if ($tipo_pessoa === 'PF') {
+            $cpf = trim($_POST['cpf']) ?? null;
+            $documento = $cpf;
+            $documento_tipo = 'CPF';
+            
+            if (empty($cpf)) {
+                throw new Exception("CPF é obrigatório para Pessoa Física.");
+            }
+            
+            // Validação básica de CPF
+            $cpf_limpo = preg_replace('/\D/', '', $cpf);
+            if (strlen($cpf_limpo) !== 11) {
+                throw new Exception("CPF deve ter 11 dígitos.");
+            }
+            
+        } else {
+            $cnpj = trim($_POST['cnpj']) ?? null;
+            $documento = $cnpj;
+            $documento_tipo = 'CNPJ';
+            
+            if (empty($cnpj)) {
+                throw new Exception("CNPJ é obrigatório para Pessoa Jurídica.");
+            }
+            
+            // Validação básica de CNPJ
+            $cnpj_limpo = preg_replace('/\D/', '', $cnpj);
+            if (strlen($cnpj_limpo) !== 14) {
+                throw new Exception("CNPJ deve ter 14 dígitos.");
+            }
+        }
 
         // Validações básicas
         if (empty($codigo) || empty($nome)) {
@@ -54,16 +91,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Inicia transação
         $pdo->beginTransaction();
 
-        // Verifica se o CNPJ ou nome do fornecedor já existe no banco
-        $sql_check_fornecedor = "SELECT COUNT(*) FROM fornecedores WHERE cnpj = :cnpj OR nome = :nome";
-        $stmt_check_fornecedor = $pdo->prepare($sql_check_fornecedor);
-        $stmt_check_fornecedor->bindParam(':cnpj', $cnpj);
-        $stmt_check_fornecedor->bindParam(':nome', $nome);
-        $stmt_check_fornecedor->execute();
-        $count_fornecedor = $stmt_check_fornecedor->fetchColumn();
+        // Verifica duplicatas de documento
+        if ($tipo_pessoa === 'PF') {
+            $sql_check_documento = "SELECT COUNT(*) FROM fornecedores WHERE cpf = :documento AND cpf IS NOT NULL";
+        } else {
+            $sql_check_documento = "SELECT COUNT(*) FROM fornecedores WHERE cnpj = :documento AND cnpj IS NOT NULL";
+        }
+        
+        $stmt_check_documento = $pdo->prepare($sql_check_documento);
+        $stmt_check_documento->bindParam(':documento', $documento);
+        $stmt_check_documento->execute();
 
-        if ($count_fornecedor > 0) {
-            throw new Exception("Fornecedor já cadastrado com o mesmo CNPJ ou nome!");
+        if ($stmt_check_documento->fetchColumn() > 0) {
+            throw new Exception("Já existe um fornecedor cadastrado com este {$documento_tipo}!");
+        }
+
+        // Verifica nome duplicado
+        $sql_check_nome = "SELECT COUNT(*) FROM fornecedores WHERE UPPER(TRIM(nome)) = UPPER(TRIM(:nome))";
+        $stmt_check_nome = $pdo->prepare($sql_check_nome);
+        $stmt_check_nome->bindParam(':nome', $nome);
+        $stmt_check_nome->execute();
+
+        if ($stmt_check_nome->fetchColumn() > 0) {
+            throw new Exception("Já existe um fornecedor cadastrado com este nome!");
         }
 
         // Verifica se o código já existe
@@ -78,11 +128,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         // Realiza o cadastro do fornecedor no banco de dados
-        $sql = "INSERT INTO fornecedores (codigo, cnpj, nome, endereco, telefone, email, observacoes) 
-                VALUES (:codigo, :cnpj, :nome, :endereco, :telefone, :email, :observacoes)";
+        $sql = "INSERT INTO fornecedores (codigo, tipo_pessoa, cnpj, cpf, nome, endereco, telefone, email, observacoes) 
+                VALUES (:codigo, :tipo_pessoa, :cnpj, :cpf, :nome, :endereco, :telefone, :email, :observacoes)";
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':codigo', $codigo, PDO::PARAM_STR);
+        $stmt->bindParam(':tipo_pessoa', $tipo_pessoa, PDO::PARAM_STR);
         $stmt->bindParam(':cnpj', $cnpj, PDO::PARAM_STR);
+        $stmt->bindParam(':cpf', $cpf, PDO::PARAM_STR);
         $stmt->bindParam(':nome', $nome, PDO::PARAM_STR);
         $stmt->bindParam(':endereco', $endereco, PDO::PARAM_STR);
         $stmt->bindParam(':telefone', $telefone, PDO::PARAM_STR);
@@ -101,7 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Registra auditoria
         logUserAction('CREATE', 'fornecedores', $fornecedor_id, [
             'codigo' => $codigo,
+            'tipo_pessoa' => $tipo_pessoa,
             'cnpj' => $cnpj,
+            'cpf' => $cpf,
             'nome' => $nome,
             'endereco' => $endereco,
             'telefone' => $telefone,
@@ -772,61 +826,101 @@ renderHeader("Cadastro de Fornecedor - LicitaSis", "fornecedores");
                 Informações Básicas
             </h3>
             
+           <div class="form-row">
+    <div class="form-group">
+        <label for="tipo_pessoa" class="required">
+            <i class="fas fa-user-tag"></i>
+            Tipo de Pessoa
+        </label>
+        <select id="tipo_pessoa" 
+                name="tipo_pessoa" 
+                class="form-control" 
+                required
+                onchange="alterarTipoPessoa(this.value)">
+            <option value="PJ" <?php echo (!isset($_POST['tipo_pessoa']) || $_POST['tipo_pessoa'] === 'PJ') ? 'selected' : ''; ?>>
+                Pessoa Jurídica (CNPJ)
+            </option>
+            <option value="PF" <?php echo (isset($_POST['tipo_pessoa']) && $_POST['tipo_pessoa'] === 'PF') ? 'selected' : ''; ?>>
+                Pessoa Física (CPF)
+            </option>
+        </select>
+    </div>
+
+    <div class="form-group input-with-validation">
+        <label for="codigo" class="required">
+            <i class="fas fa-barcode"></i>
+            Código do Fornecedor
+        </label>
+        <input type="text" 
+               id="codigo" 
+               name="codigo" 
+               class="form-control" 
+               placeholder="Digite o código único do fornecedor"
+               value="<?php echo $success ? '' : (isset($_POST['codigo']) ? htmlspecialchars($_POST['codigo']) : ''); ?>"
+               required
+               onblur="validarCodigo(this)">
+        <i class="validation-icon fas fa-check-circle"></i>
+        <small class="form-text">Código único para identificação interna</small>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group input-with-validation">
+        <label for="nome" class="required">
+            <i class="fas fa-building" id="icon-nome"></i>
+            <span id="label-nome">Nome do Fornecedor</span>
+        </label>
+        <input type="text" 
+               id="nome" 
+               name="nome" 
+               class="form-control" 
+               placeholder="Nome ou razão social completa"
+               value="<?php echo $success ? '' : (isset($_POST['nome']) ? htmlspecialchars($_POST['nome']) : ''); ?>"
+               required
+               onblur="validarNome(this)">
+        <i class="validation-icon fas fa-check-circle"></i>
+    </div>
+
+    <!-- Campo CNPJ (visível para PJ) -->
+    <div class="form-group input-with-validation" id="campo-cnpj">
+        <label for="cnpj" class="required">
+            <i class="fas fa-id-card"></i>
+            CNPJ
+        </label>
+        <input type="text" 
+               id="cnpj" 
+               name="cnpj" 
+               class="form-control" 
+               placeholder="00.000.000/0000-00"
+               value="<?php echo $success ? '' : (isset($_POST['cnpj']) ? htmlspecialchars($_POST['cnpj']) : ''); ?>"
+               maxlength="18"
+               oninput="aplicarMascaraCNPJ(this)"
+               onblur="validarCNPJCompleto(this)">
+        <i class="validation-icon fas fa-check-circle"></i>
+        <small class="form-text">Será consultado automaticamente na Receita Federal</small>
+    </div>
+
+    <!-- Campo CPF (oculto por padrão, visível para PF) -->
+    <div class="form-group input-with-validation" id="campo-cpf" style="display: none;">
+        <label for="cpf" class="required">
+            <i class="fas fa-id-card"></i>
+            CPF
+        </label>
+        <input type="text" 
+               id="cpf" 
+               name="cpf" 
+               class="form-control" 
+               placeholder="000.000.000-00"
+               value="<?php echo $success ? '' : (isset($_POST['cpf']) ? htmlspecialchars($_POST['cpf']) : ''); ?>"
+               maxlength="14"
+               oninput="aplicarMascaraCPF(this)"
+               onblur="validarCPFCompleto(this)">
+        <i class="validation-icon fas fa-check-circle"></i>
+        <small class="form-text">Para teste, use CPFs válidos: 11144477735, 12345678909, 98765432100</small>
+    </div>
+</div>
+
             <div class="form-row">
-                <div class="form-group input-with-validation">
-                    <label for="codigo" class="required">
-                        <i class="fas fa-barcode"></i>
-                        Código do Fornecedor
-                    </label>
-                    <input type="text" 
-                           id="codigo" 
-                           name="codigo" 
-                           class="form-control" 
-                           placeholder="Digite o código único do fornecedor"
-                           value="<?php echo $success ? '' : (isset($_POST['codigo']) ? htmlspecialchars($_POST['codigo']) : ''); ?>"
-                           required
-                           onblur="validarCodigo(this)">
-                    <i class="validation-icon fas fa-check-circle"></i>
-                    <small class="form-text">Código único para identificação interna</small>
-                </div>
-
-                <div class="form-group input-with-validation">
-                    <label for="nome" class="required">
-                        <i class="fas fa-building"></i>
-                        Nome do Fornecedor
-                    </label>
-                    <input type="text" 
-                           id="nome" 
-                           name="nome" 
-                           class="form-control" 
-                           placeholder="Nome ou razão social completa"
-                           value="<?php echo $success ? '' : (isset($_POST['nome']) ? htmlspecialchars($_POST['nome']) : ''); ?>"
-                           required
-                           onblur="validarNome(this)">
-                    <i class="validation-icon fas fa-check-circle"></i>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group input-with-validation">
-                    <label for="cnpj" class="required">
-                        <i class="fas fa-id-card"></i>
-                        CNPJ
-                    </label>
-                    <input type="text" 
-                           id="cnpj" 
-                           name="cnpj" 
-                           class="form-control" 
-                           placeholder="00.000.000/0000-00"
-                           value="<?php echo $success ? '' : (isset($_POST['cnpj']) ? htmlspecialchars($_POST['cnpj']) : ''); ?>"
-                           required
-                           maxlength="18"
-                           oninput="aplicarMascaraCNPJ(this)"
-                           onblur="validarCNPJCompleto(this)">
-                    <i class="validation-icon fas fa-check-circle"></i>
-                    <small class="form-text">Será consultado automaticamente na Receita Federal</small>
-                </div>
-
                 <div class="form-group input-with-validation">
                     <label for="email">
                         <i class="fas fa-envelope"></i>
@@ -1008,6 +1102,9 @@ function aplicarMascaraTelefone(input) {
 /**
  * Valida código do fornecedor
  */
+/**
+ * Valida código do fornecedor
+ */
 function validarCodigo(input) {
     const codigo = input.value.trim();
     
@@ -1021,7 +1118,12 @@ function validarCodigo(input) {
         return false;
     }
     
-    // Verifica se código já existe (simulação - implementar AJAX real)
+    if (codigo.length > 20) {
+        setValidationState(input, false, 'Código deve ter no máximo 20 caracteres');
+        return false;
+    }
+    
+    // Verifica se código já existe
     verificarCodigoExistente(codigo, input);
     
     return true;
@@ -1050,25 +1152,44 @@ function validarNome(input) {
 /**
  * Valida CNPJ completo
  */
+/**
+ * Valida CNPJ completo
+ */
 function validarCNPJCompleto(input) {
     const cnpj = input.value.replace(/\D/g, '');
+    const tipoPessoa = document.getElementById('tipo_pessoa').value;
     
-    if (!cnpj) {
-        setValidationState(input, false, 'CNPJ é obrigatório');
+    // Se for pessoa física, CNPJ não é obrigatório
+    if (tipoPessoa === 'PF') {
+        if (!cnpj) {
+            setValidationState(input, null, '');
+            return true;
+        }
+    }
+    
+    // Se for pessoa jurídica e estiver vazio
+    if (tipoPessoa === 'PJ' && !cnpj) {
+        setValidationState(input, false, 'CNPJ é obrigatório para Pessoa Jurídica');
         return false;
     }
     
-    if (cnpj.length !== 14) {
-        setValidationState(input, false, 'CNPJ deve ter 14 dígitos');
-        return false;
+    // Se tem valor, valida
+    if (cnpj) {
+        if (cnpj.length !== 14) {
+            setValidationState(input, false, 'CNPJ deve ter 14 dígitos');
+            return false;
+        }
+        
+        if (!validarDigitosCNPJ(cnpj)) {
+            setValidationState(input, false, 'CNPJ inválido');
+            return false;
+        }
+        
+        // Verifica se CNPJ já existe
+        verificarDocumentoExistente(cnpj, 'CNPJ', input);
+        setValidationState(input, true, 'CNPJ válido');
     }
     
-    if (!validarDigitosCNPJ(cnpj)) {
-        setValidationState(input, false, 'CNPJ inválido');
-        return false;
-    }
-    
-    setValidationState(input, true, 'CNPJ válido');
     return true;
 }
 
@@ -1232,9 +1353,24 @@ function realizarConsultaCNPJ(cnpj) {
 /**
  * Verifica se código já existe
  */
+/**
+ * Verifica se código já existe
+ */
 function verificarCodigoExistente(codigo, input) {
+    // Por enquanto, só valida local até implementar o backend
+    if (codigo && codigo.length >= 2) {
+        setValidationState(input, true, 'Código válido');
+    }
+    
+    // Implementar depois com o backend
+    /*
     fetch(`verificar_codigo_fornecedor.php?codigo=${encodeURIComponent(codigo)}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.existe) {
                 setValidationState(input, false, 'Código já existe para outro fornecedor');
@@ -1244,7 +1380,10 @@ function verificarCodigoExistente(codigo, input) {
         })
         .catch(error => {
             console.error('Erro ao verificar código:', error);
+            // Em caso de erro, assume que está ok
+            setValidationState(input, true, 'Código válido');
         });
+    */
 }
 
 // ===========================================
@@ -1254,41 +1393,67 @@ function verificarCodigoExistente(codigo, input) {
 /**
  * Valida todo o formulário antes do envio
  */
+/**
+ * Valida todo o formulário antes do envio
+ */
 function validarFormulario() {
     let isValid = true;
+    let firstErrorField = null;
     
     // Campos obrigatórios
     const codigoInput = document.getElementById('codigo');
     const nomeInput = document.getElementById('nome');
     const cnpjInput = document.getElementById('cnpj');
+    const cpfInput = document.getElementById('cpf');
     const emailInput = document.getElementById('email');
+    const tipoPessoa = document.getElementById('tipo_pessoa').value;
     
     // Valida código
     if (!validarCodigo(codigoInput)) {
         isValid = false;
-        codigoInput.focus();
+        if (!firstErrorField) firstErrorField = codigoInput;
     }
     
     // Valida nome
     if (!validarNome(nomeInput)) {
         isValid = false;
-        if (isValid === true) nomeInput.focus(); // Foca no primeiro erro
+        if (!firstErrorField) firstErrorField = nomeInput;
     }
     
-    // Valida CNPJ
-    if (!validarCNPJCompleto(cnpjInput)) {
-        isValid = false;
-        if (isValid === true) cnpjInput.focus();
+    // Valida documento baseado no tipo de pessoa
+    if (tipoPessoa === 'PF') {
+        // Pessoa Física - valida apenas CPF
+        if (!cpfInput.value.trim()) {
+            setValidationState(cpfInput, false, 'CPF é obrigatório para Pessoa Física');
+            isValid = false;
+            if (!firstErrorField) firstErrorField = cpfInput;
+        } else if (!validarCPFCompleto(cpfInput)) {
+            isValid = false;
+            if (!firstErrorField) firstErrorField = cpfInput;
+        }
+    } else {
+        // Pessoa Jurídica - valida apenas CNPJ
+        if (!cnpjInput.value.trim()) {
+            setValidationState(cnpjInput, false, 'CNPJ é obrigatório para Pessoa Jurídica');
+            isValid = false;
+            if (!firstErrorField) firstErrorField = cnpjInput;
+        } else if (!validarCNPJCompleto(cnpjInput)) {
+            isValid = false;
+            if (!firstErrorField) firstErrorField = cnpjInput;
+        }
     }
     
     // Valida e-mail se preenchido
     if (emailInput.value && !validarEmail(emailInput)) {
         isValid = false;
-        if (isValid === true) emailInput.focus();
+        if (!firstErrorField) firstErrorField = emailInput;
     }
     
     if (!isValid) {
         showToast('Por favor, corrija os campos destacados em vermelho.', 'error');
+        if (firstErrorField) {
+            firstErrorField.focus();
+        }
         return false;
     }
     
@@ -1593,6 +1758,33 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Todos os event listeners inicializados');
 });
 
+// Event listener para CPF
+// Event listener para CPF
+    // Event listener para CPF
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function() {
+            aplicarMascaraCPF(this);
+        });
+        
+        cpfInput.addEventListener('blur', function() {
+            validarCPFCompleto(this);
+        });
+    }
+
+    // Event listener para tipo de pessoa
+    const tipoPessoaSelect = document.getElementById('tipo_pessoa');
+    if (tipoPessoaSelect) {
+        tipoPessoaSelect.addEventListener('change', function() {
+            alterarTipoPessoa(this.value);
+        });
+        
+        // Configura estado inicial
+        setTimeout(() => {
+            alterarTipoPessoa(tipoPessoaSelect.value);
+        }, 100);
+    }
+
 // ===========================================
 // EVENT LISTENERS GLOBAIS
 // ===========================================
@@ -1681,6 +1873,166 @@ console.log('🚀 Sistema de Cadastro de Fornecedores LicitaSis v7.0 carregado:'
     acessibilidade: 'Suporte a teclado e screen readers',
     performance: 'Otimizado com debounce'
 });
+
+// ===========================================
+// FUNÇÕES PARA PESSOA FÍSICA/JURÍDICA
+// ===========================================
+
+/**
+ * Altera campos baseado no tipo de pessoa
+ */
+/**
+ * Altera campos baseado no tipo de pessoa
+ */
+function alterarTipoPessoa(tipo) {
+    const campoCNPJ = document.getElementById('campo-cnpj');
+    const campoCPF = document.getElementById('campo-cpf');
+    const iconNome = document.getElementById('icon-nome');
+    const labelNome = document.getElementById('label-nome');
+    const inputNome = document.getElementById('nome');
+    const cnpjInput = document.getElementById('cnpj');
+    const cpfInput = document.getElementById('cpf');
+    
+    if (tipo === 'PF') {
+        // Pessoa Física
+        campoCNPJ.style.display = 'none';
+        campoCPF.style.display = 'block';
+        iconNome.className = 'fas fa-user';
+        labelNome.textContent = 'Nome Completo';
+        inputNome.placeholder = 'Nome completo da pessoa física';
+        
+        // Gerencia required attributes
+        cnpjInput.removeAttribute('required');
+        cpfInput.setAttribute('required', 'required');
+        
+        // Limpa validações e valor do CNPJ
+        cnpjInput.classList.remove('is-valid', 'is-invalid', 'loading');
+        cnpjInput.value = '';
+        
+    } else {
+        // Pessoa Jurídica
+        campoCNPJ.style.display = 'block';
+        campoCPF.style.display = 'none';
+        iconNome.className = 'fas fa-building';
+        labelNome.textContent = 'Nome do Fornecedor';
+        inputNome.placeholder = 'Nome ou razão social completa';
+        
+        // Gerencia required attributes
+        cpfInput.removeAttribute('required');
+        cnpjInput.setAttribute('required', 'required');
+        
+        // Limpa validações e valor do CPF
+        cpfInput.classList.remove('is-valid', 'is-invalid');
+        cpfInput.value = '';
+    }
+    
+    // Atualiza as labels dos campos para refletir se são obrigatórios ou não
+    const cnpjLabel = document.querySelector('label[for="cnpj"]');
+    const cpfLabel = document.querySelector('label[for="cpf"]');
+    
+    if (cnpjLabel) {
+        cnpjLabel.classList.toggle('required', tipo === 'PJ');
+    }
+    if (cpfLabel) {
+        cpfLabel.classList.toggle('required', tipo === 'PF');
+    }
+}
+
+/**
+ * Aplica máscara de CPF
+ */
+function aplicarMascaraCPF(input) {
+    let value = input.value.replace(/\D/g, '');
+    
+    if (value.length <= 11) {
+        value = value.replace(/^(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+        value = value.replace(/\.(\d{3})(\d)/, '.$1-$2');
+        input.value = value;
+    }
+}
+
+/**
+ * Valida CPF completo
+ */
+/**
+ * Valida CPF completo
+ */
+function validarCPFCompleto(input) {
+    const cpf = input.value.replace(/\D/g, '');
+    const tipoPessoa = document.getElementById('tipo_pessoa').value;
+    
+    // Se for pessoa jurídica, CPF não é obrigatório
+    if (tipoPessoa === 'PJ') {
+        if (!cpf) {
+            setValidationState(input, null, '');
+            return true;
+        }
+    }
+    
+    // Se for pessoa física e estiver vazio
+    if (tipoPessoa === 'PF' && !cpf) {
+        setValidationState(input, false, 'CPF é obrigatório para Pessoa Física');
+        return false;
+    }
+    
+    // Se tem valor, valida
+    if (cpf) {
+        if (cpf.length !== 11) {
+            setValidationState(input, false, 'CPF deve ter 11 dígitos');
+            return false;
+        }
+        
+        if (!validarDigitosCPF(cpf)) {
+            setValidationState(input, false, 'CPF inválido');
+            return false;
+        }
+        
+        // Verifica se CPF já existe
+        verificarDocumentoExistente(cpf, 'CPF', input);
+        setValidationState(input, true, 'CPF válido');
+    }
+    
+    return true;
+}
+
+/**
+ * Valida dígitos verificadores do CPF
+ */
+/**
+
+/**
+ * Verifica se documento já existe
+ */
+function verificarDocumentoExistente(documento, tipo, input) {
+    // Por enquanto, só valida local até implementar o backend
+    if (documento && ((tipo === 'CPF' && documento.length === 11) || (tipo === 'CNPJ' && documento.length === 14))) {
+        setValidationState(input, true, `${tipo} válido`);
+    }
+    
+    // Implementar depois com o backend
+    /*
+    fetch(`verificar_documento_fornecedor.php?documento=${encodeURIComponent(documento)}&tipo=${tipo}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.existe) {
+                setValidationState(input, false, `${tipo} já cadastrado para outro fornecedor`);
+            } else {
+                setValidationState(input, true, `${tipo} disponível`);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar documento:', error);
+            // Em caso de erro, assume que está ok
+            setValidationState(input, true, `${tipo} válido`);
+        });
+    */
+}
 </script>
 
 </body>
